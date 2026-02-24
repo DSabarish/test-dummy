@@ -16,6 +16,7 @@ echo $PROJECT_ID
 
 ## 2. Environment & tools
 
+
 ```powershell
 terraform -version
 gcloud version
