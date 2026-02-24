@@ -23,8 +23,17 @@ jobs:
           if not os.path.isfile(out):
             print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
             exit(1)
-          with open(out, encoding="utf-8-sig") as f:
-            raw = f.read().replace("\r", "")
+          with open(out, "rb") as f:
+            raw_bytes = f.read().replace(b"\x00", b"")
+          if raw_bytes.startswith(b"\xff\xfe"):
+            raw = raw_bytes[2:].decode("utf-16-le")
+          elif raw_bytes.startswith(b"\xfe\xff"):
+            raw = raw_bytes[2:].decode("utf-16-be")
+          elif raw_bytes.startswith(b"\xef\xbb\xbf"):
+            raw = raw_bytes[3:].decode("utf-8")
+          else:
+            raw = raw_bytes.decode("utf-8")
+          raw = raw.replace("\r", "")
           try:
             data = json.loads(raw)
           except json.JSONDecodeError as e:
@@ -92,8 +101,17 @@ jobs:
           if not os.path.isfile(out):
             print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
             exit(1)
-          with open(out, encoding="utf-8-sig") as f:
-            raw = f.read().replace("\r", "")
+          with open(out, "rb") as f:
+            raw_bytes = f.read().replace(b"\x00", b"")
+          if raw_bytes.startswith(b"\xff\xfe"):
+            raw = raw_bytes[2:].decode("utf-16-le")
+          elif raw_bytes.startswith(b"\xfe\xff"):
+            raw = raw_bytes[2:].decode("utf-16-be")
+          elif raw_bytes.startswith(b"\xef\xbb\xbf"):
+            raw = raw_bytes[3:].decode("utf-8")
+          else:
+            raw = raw_bytes.decode("utf-8")
+          raw = raw.replace("\r", "")
           try:
             data = json.loads(raw)
           except json.JSONDecodeError as e:
