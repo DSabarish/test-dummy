@@ -4,7 +4,8 @@
 # --- GCP & naming (used by Terraform and ML) ---
 # project_id: "sabs-dev-100"
 # project_id: "sabs-dev1-100"
-project_id: "sabs-dev2-100"
+# project_id: "sabs-dev2-100"
+project_id: "sabs-dev3-100"
 region: "asia-south1"
 environment: "dev"
 prefix: "mlapp"

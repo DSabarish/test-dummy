@@ -8,7 +8,7 @@ Set `$PROJECT_ID` to match `project_id` in `config.yaml`.
 ## 1. Project variable
 
 ```powershell
-$PROJECT_ID = "sabs-dev2-100"   # must match config.yaml project_id
+$PROJECT_ID = "sabs-dev3-100"   # must match config.yaml project_id
 echo $PROJECT_ID
 ```
 
