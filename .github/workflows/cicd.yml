@@ -25,12 +25,14 @@ jobs:
             exit(1)
           with open(out, "rb") as f:
             raw_bytes = f.read().replace(b"\x00", b"")
-          if raw_bytes.startswith(b"\xff\xfe"):
-            raw = raw_bytes[2:].decode("utf-16-le")
-          elif raw_bytes.startswith(b"\xfe\xff"):
-            raw = raw_bytes[2:].decode("utf-16-be")
-          elif raw_bytes.startswith(b"\xef\xbb\xbf"):
+          if raw_bytes.startswith(b"\xef\xbb\xbf"):
             raw = raw_bytes[3:].decode("utf-8")
+          elif raw_bytes.startswith(b"\xff\xfe") or raw_bytes.startswith(b"\xfe\xff"):
+            rest = raw_bytes[2:]
+            try:
+              raw = rest.decode("utf-8")
+            except UnicodeDecodeError:
+              raw = rest.decode("utf-16-le" if raw_bytes.startswith(b"\xff\xfe") else "utf-16-be")
           else:
             raw = raw_bytes.decode("utf-8")
           raw = raw.replace("\r", "")
@@ -103,12 +105,14 @@ jobs:
             exit(1)
           with open(out, "rb") as f:
             raw_bytes = f.read().replace(b"\x00", b"")
-          if raw_bytes.startswith(b"\xff\xfe"):
-            raw = raw_bytes[2:].decode("utf-16-le")
-          elif raw_bytes.startswith(b"\xfe\xff"):
-            raw = raw_bytes[2:].decode("utf-16-be")
-          elif raw_bytes.startswith(b"\xef\xbb\xbf"):
+          if raw_bytes.startswith(b"\xef\xbb\xbf"):
             raw = raw_bytes[3:].decode("utf-8")
+          elif raw_bytes.startswith(b"\xff\xfe") or raw_bytes.startswith(b"\xfe\xff"):
+            rest = raw_bytes[2:]
+            try:
+              raw = rest.decode("utf-8")
+            except UnicodeDecodeError:
+              raw = rest.decode("utf-16-le" if raw_bytes.startswith(b"\xff\xfe") else "utf-16-be")
           else:
             raw = raw_bytes.decode("utf-8")
           raw = raw.replace("\r", "")
