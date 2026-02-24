@@ -12,6 +12,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -132,8 +136,18 @@ variable "cicd_roles" {
   description = "Roles for CI/CD service account"
   type        = list(string)
   default = [
-    "roles/storage.objectAdmin",
-    "roles/artifactregistry.writer"
+    # Full control of GCS buckets used by the ML app
+    "roles/storage.admin",
+
+    # Manage and push/pull images in Artifact Registry
+    "roles/artifactregistry.admin",
+
+    # BigQuery access for creating/updating tables and loading data
+    "roles/bigquery.dataEditor",
+    "roles/bigquery.jobUser",
+
+    # Allow CI/CD to act as other service accounts when needed (e.g. runtime SA)
+    "roles/iam.serviceAccountUser"
   ]
 }
 
@@ -141,7 +155,12 @@ variable "runtime_roles" {
   description = "Roles for runtime service account"
   type        = list(string)
   default = [
-    "roles/storage.objectViewer"
+    # Read access to GCS buckets for models/data
+    "roles/storage.objectViewer",
+
+    # Read/query access to BigQuery data
+    "roles/bigquery.dataViewer",
+    "roles/bigquery.jobUser"
   ]
 }
 
@@ -250,6 +269,30 @@ resource "google_project_iam_member" "runtime_roles" {
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+############################################
+# LOCAL ENV FILE FOR ML APP
+############################################
+
+resource "local_file" "ml_env" {
+  filename = "${path.module}/ml_app_env.txt"
+
+  content = <<-EOT
+GCP_PROJECT=${var.project_id}
+GCP_REGION=${var.region}
+
+DATA_BUCKET=${google_storage_bucket.data.name}
+ARTIFACTS_BUCKET=${google_storage_bucket.artifacts.name}
+
+DATASET_ID=${google_bigquery_dataset.dataset.dataset_id}
+TABLE_ID=${google_bigquery_table.table.table_id}
+
+ARTIFACT_REPO_URL=${google_artifact_registry_repository.repo.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.repo.repository_id}
+
+CICD_SERVICE_ACCOUNT=${google_service_account.cicd.email}
+RUNTIME_SERVICE_ACCOUNT=${google_service_account.runtime.email}
+EOT
 }
 
 ############################################

@@ -1,0 +1,13 @@
+GCP_PROJECT=sabs-dev-100
+GCP_REGION=asia-south1
+
+DATA_BUCKET=mlapp-dev-data-sabs-dev-100
+ARTIFACTS_BUCKET=mlapp-dev-artifacts-sabs-dev-100
+
+DATASET_ID=training_dataset_dev
+TABLE_ID=features_table
+
+ARTIFACT_REPO_URL=asia-south1-docker.pkg.dev/sabs-dev-100/mlapp-dev-repo
+
+CICD_SERVICE_ACCOUNT=mlapp-dev-cicd@sabs-dev-100.iam.gserviceaccount.com
+RUNTIME_SERVICE_ACCOUNT=mlapp-dev-runtime@sabs-dev-100.iam.gserviceaccount.com

@@ -1,6 +1,6 @@
 # terraform\dev.tfvars
 
-project_id  = "sabs-1000"
+project_id  = "sabs-dev-100"
 region      = "asia-south1"
 environment = "dev"
 prefix      = "mlapp"

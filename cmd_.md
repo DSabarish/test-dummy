@@ -5,7 +5,7 @@
 # -------------------------------
 # 🔹 PROJECT VARIABLE
 # -------------------------------
-$PROJECT_ID = "sabs-1000"
+$PROJECT_ID = "sabs-dev-100"
 echo $PROJECT_ID
 
 # -------------------------------
@@ -43,7 +43,7 @@ cat $env:APPDATA\gcloud\application_default_credentials.json
 gcloud services enable artifactregistry.googleapis.com --project $PROJECT_ID
 gcloud services enable bigquery.googleapis.com --project $PROJECT_ID 
 gcloud services enable iam.googleapis.com --project $PROJECT_ID
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com bigquery.googleapis.com iam.serviceaccounts.actAs --quiet
+
 
 gcloud services enable `
   run.googleapis.com `
@@ -110,3 +110,7 @@ data_bucket = "mlapp-dev-data-sabs-1000"
 dataset_id = "training_dataset_dev"
 runtime_service_account = "mlapp-dev-runtime@sabs-1000.iam.gserviceaccount.com"
 PS C:\Users\Selvam Sabarish\Desktop\sabs\my_work_on_cnp_projects\DN_Terraform\InfraBuild3\terraform> 
+
+
+
+
