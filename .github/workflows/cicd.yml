@@ -22,11 +22,11 @@ jobs:
             echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
             exit 1
           fi
-          # Strip UTF-8 BOM if present (avoids jq parse error on Windows-generated files)
+          # Strip BOM and CR (CRLF from Windows/Git checkout breaks jq)
           CLEAN="$RUNNER_TEMP/tf_outputs.json"
-          sed '1s/^\xEF\xBB\xBF//' "$OUT" > "$CLEAN"
+          sed '1s/^\xEF\xBB\xBF//' "$OUT" | tr -d '\r' > "$CLEAN"
           if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
-            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' (no BOM) and commit."
+            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' and commit (use LF line endings, not CRLF)."
             exit 1
           fi
           GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
@@ -89,11 +89,11 @@ jobs:
             echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
             exit 1
           fi
-          # Strip UTF-8 BOM if present (avoids jq parse error on Windows-generated files)
+          # Strip BOM and CR (CRLF from Windows/Git checkout breaks jq)
           CLEAN="$RUNNER_TEMP/tf_outputs.json"
-          sed '1s/^\xEF\xBB\xBF//' "$OUT" > "$CLEAN"
+          sed '1s/^\xEF\xBB\xBF//' "$OUT" | tr -d '\r' > "$CLEAN"
           if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
-            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' (no BOM) and commit."
+            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' and commit (use LF line endings, not CRLF)."
             exit 1
           fi
           GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
