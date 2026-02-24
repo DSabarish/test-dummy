@@ -110,16 +110,29 @@ terraform apply
 
 ---
 
+## 8. Export outputs for CI/CD
+
+CI/CD reads **`terraform/outputs.json`** (no secrets). After every `terraform apply`, generate and commit it:
+
+```powershell
+# From terraform/ directory (you are already there after apply)
+terraform output -json > outputs.json
+# Then from repo root: git add terraform/outputs.json && git commit -m "chore: update Terraform outputs for CI/CD"
+```
+
+If this file is missing, the workflow will fail with a clear error. Do **not** add `terraform/outputs.json` to `.gitignore`.
+
+---
+
 ## Done
 
 Infra is deployed to `$PROJECT_ID`. Terraform outputs (e.g. after apply):
 
+- `project_id`, `region`, `table_id`
 - `artifact_repo_url`
-- `artifacts_bucket`
-- `data_bucket`
+- `artifacts_bucket`, `data_bucket`
 - `dataset_id`
-- `cicd_service_account`
-- `runtime_service_account`
+- `cicd_service_account`, `runtime_service_account`
 
 ---
 

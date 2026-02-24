@@ -129,8 +129,20 @@ resource "google_project_iam_member" "runtime_roles" {
 }
 
 ############################################
-# OUTPUTS
+# OUTPUTS (used by CI/CD via terraform/outputs.json)
 ############################################
+
+output "project_id" {
+  value = local.config.project_id
+}
+
+output "region" {
+  value = local.config.region
+}
+
+output "table_id" {
+  value = local.config.table_id
+}
 
 output "artifact_repo_url" {
   value = "${google_artifact_registry_repository.repo.location}-docker.pkg.dev/${local.config.project_id}/${google_artifact_registry_repository.repo.repository_id}"

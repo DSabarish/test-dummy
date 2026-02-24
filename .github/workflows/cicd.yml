@@ -15,6 +15,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load Terraform outputs into env
+        run: |
+          OUT="terraform/outputs.json"
+          if [ ! -f "$OUT" ]; then
+            echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
+            exit 1
+          fi
+          GCP_PROJECT=$(jq -r '.project_id.value // empty' $OUT)
+          TABLE_ID=$(jq -r '.table_id.value // empty' $OUT)
+          echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
+          echo "DATA_BUCKET=$(jq -r '.data_bucket.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "DATASET_ID=$(jq -r '.dataset_id.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "TABLE_ID=$TABLE_ID" >> $GITHUB_ENV
+          if [ -z "$GCP_PROJECT" ] || [ -z "$TABLE_ID" ]; then
+            echo "::error::Missing or invalid Terraform outputs in $OUT. Re-run 'terraform output -json > terraform/outputs.json' and commit."
+            exit 1
+          fi
+
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -30,11 +49,11 @@ jobs:
       - name: Run ML pipeline
         run: python ML-code/run_pipeline.py
         env:
-          GCP_PROJECT:      ${{ secrets.GCP_PROJECT }}
-          DATA_BUCKET:      ${{ secrets.DATA_BUCKET }}
-          ARTIFACTS_BUCKET: ${{ secrets.ARTIFACTS_BUCKET }}
-          DATASET_ID:       ${{ secrets.DATASET_ID }}
-          TABLE_ID:         ${{ secrets.TABLE_ID }}
+          GCP_PROJECT:      ${{ env.GCP_PROJECT }}
+          DATA_BUCKET:      ${{ env.DATA_BUCKET }}
+          ARTIFACTS_BUCKET: ${{ env.ARTIFACTS_BUCKET }}
+          DATASET_ID:       ${{ env.DATASET_ID }}
+          TABLE_ID:         ${{ env.TABLE_ID }}
 
   test:
     runs-on: ubuntu-latest
@@ -56,6 +75,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load Terraform outputs into env
+        run: |
+          OUT="terraform/outputs.json"
+          if [ ! -f "$OUT" ]; then
+            echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
+            exit 1
+          fi
+          GCP_PROJECT=$(jq -r '.project_id.value // empty' $OUT)
+          ARTIFACT_REPO_URL=$(jq -r '.artifact_repo_url.value // empty' $OUT)
+          RUNTIME_SA=$(jq -r '.runtime_service_account.value // empty' $OUT)
+          echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
+          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "REGION=$(jq -r '.region.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "ARTIFACT_REPO_URL=$ARTIFACT_REPO_URL" >> $GITHUB_ENV
+          echo "RUNTIME_SERVICE_ACCOUNT=$RUNTIME_SA" >> $GITHUB_ENV
+          if [ -z "$GCP_PROJECT" ] || [ -z "$ARTIFACT_REPO_URL" ] || [ -z "$RUNTIME_SA" ]; then
+            echo "::error::Missing or invalid Terraform outputs in $OUT. Re-run 'terraform output -json > terraform/outputs.json' and commit."
+            exit 1
+          fi
+
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -64,11 +103,11 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Docker auth
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and push
         run: |
-          REPO="asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/mlapp-dev-repo"
+          REPO="${{ env.ARTIFACT_REPO_URL }}"
           IMG="$REPO/app:${{ github.sha }}"
           echo "Building $IMG"
           docker build -t "$IMG" .
@@ -79,10 +118,10 @@ jobs:
         run: |
           gcloud run deploy app \
             --image "${{ env.IMAGE }}" \
-            --region "asia-south1" \
+            --region "${{ env.REGION }}" \
             --platform managed \
             --allow-unauthenticated \
-            --service-account "mlapp-dev-runtime@sabs-1000.iam.gserviceaccount.com" \
-            --set-env-vars "GCP_PROJECT=${{ secrets.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ secrets.ARTIFACTS_BUCKET }}"
+            --service-account "${{ env.RUNTIME_SERVICE_ACCOUNT }}" \
+            --set-env-vars "GCP_PROJECT=${{ env.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ env.ARTIFACTS_BUCKET }}"
         env:
-          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT }}
+          CLOUDSDK_CORE_PROJECT: ${{ env.GCP_PROJECT }}
