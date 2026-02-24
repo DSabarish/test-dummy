@@ -1,0 +1,73 @@
+# Master config — single source for Terraform and ML. See CONFIG.md.
+# Edit only here. feature_columns are derived from table_schema in ML code.
+
+# --- GCP & naming (used by Terraform and ML) ---
+# project_id: "sabs-dev-100"
+# project_id: "sabs-dev1-100"
+project_id: "sabs-dev2-100"
+region: "asia-south1"
+environment: "dev"
+prefix: "mlapp"
+
+# --- BigQuery ---
+dataset_id: "training_dataset_dev"
+table_id: "features_table"
+dataset_location: "asia-south1"
+
+# --- BigQuery table schema (single source: Terraform + ML; feature_columns = all except target_column) ---
+table_schema:
+  - name: "f1"
+    type: "FLOAT"
+    mode: "NULLABLE"
+  - name: "f2"
+    type: "FLOAT"
+    mode: "NULLABLE"
+  - name: "f3"
+    type: "FLOAT"
+    mode: "NULLABLE"
+  - name: "f4"
+    type: "FLOAT"
+    mode: "NULLABLE"
+  - name: "f5"
+    type: "FLOAT"
+    mode: "NULLABLE"
+  - name: "T"
+    type: "FLOAT"
+    mode: "NULLABLE"
+
+# Which table_schema column is the target (rest are feature_columns)
+target_column: "T"
+
+# --- GCS paths for ML (versioned data and models) ---
+data_gcs_prefix: "data"
+models_gcs_prefix: "models"
+model_filename: "model.joblib"
+latest_subfolder: "latest"
+
+# --- Terraform: labels and options ---
+labels:
+  owner: "ml-team"
+  environment: "dev"
+
+dataset_delete_on_destroy: true
+bucket_force_destroy: true
+bucket_storage_class: "STANDARD"
+
+artifacts_retention_days: 7
+data_retention_days: 3
+
+# --- Terraform: Artifact Registry ---
+artifact_format: "DOCKER"
+artifact_description: "Artifact repository"
+
+# --- Terraform: IAM roles (optional; omit to use Terraform defaults) ---
+# cicd_roles:
+#   - "roles/storage.admin"
+#   - "roles/artifactregistry.admin"
+#   - "roles/bigquery.dataEditor"
+#   - "roles/bigquery.jobUser"
+#   - "roles/iam.serviceAccountUser"
+# runtime_roles:
+#   - "roles/storage.objectViewer"
+#   - "roles/bigquery.dataViewer"
+#   - "roles/bigquery.jobUser"
