@@ -9,7 +9,8 @@ RUN pip install --no-cache-dir -r ML-code/requirements.txt
 
 COPY ML-code/ ML-code/
 COPY frontend/ frontend/
+COPY config.yaml .
 
 ENV PORT=8080
 EXPOSE 8080
-CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["sh", "-c", "exec uvicorn inference:app --host 0.0.0.0 --port ${PORT:-8080}"]
