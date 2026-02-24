@@ -17,29 +17,31 @@ jobs:
 
       - name: Load Terraform outputs into env
         run: |
-          OUT="terraform/outputs.json"
-          if [ ! -f "$OUT" ]; then
-            echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
-            exit 1
-          fi
-          # Strip BOM and CR (CRLF from Windows/Git checkout breaks jq)
-          CLEAN="$RUNNER_TEMP/tf_outputs.json"
-          sed '1s/^\xEF\xBB\xBF//' "$OUT" | tr -d '\r' > "$CLEAN"
-          if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
-            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' and commit (use LF line endings, not CRLF)."
-            exit 1
-          fi
-          GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
-          TABLE_ID=$(jq -r '.table_id.value // empty' "$CLEAN")
-          echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
-          echo "DATA_BUCKET=$(jq -r '.data_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
-          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
-          echo "DATASET_ID=$(jq -r '.dataset_id.value // empty' "$CLEAN")" >> $GITHUB_ENV
-          echo "TABLE_ID=$TABLE_ID" >> $GITHUB_ENV
-          if [ -z "$GCP_PROJECT" ] || [ -z "$TABLE_ID" ]; then
-            echo "::error::Missing or invalid Terraform outputs in $OUT. Re-run 'terraform output -json > terraform/outputs.json' and commit."
-            exit 1
-          fi
+          python3 - << 'PY'
+          import json, os
+          out = "terraform/outputs.json"
+          if not os.path.isfile(out):
+            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
+            exit(1)
+          with open(out, encoding="utf-8-sig") as f:
+            raw = f.read().replace("\r", "")
+          try:
+            data = json.loads(raw)
+          except json.JSONDecodeError as e:
+            print("::error::" + out + " is not valid JSON:", e)
+            exit(1)
+          def v(k):
+            return (data.get(k) or {}).get("value") or ""
+          env_file = os.environ.get("GITHUB_ENV")
+          required = ["project_id", "table_id"]
+          for key in required:
+            if not v(key):
+              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/outputs.json' and commit.")
+              exit(1)
+          for name, key in [("GCP_PROJECT", "project_id"), ("DATA_BUCKET", "data_bucket"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("DATASET_ID", "dataset_id"), ("TABLE_ID", "table_id")]:
+            with open(env_file, "a") as ef:
+              ef.write(name + "=" + v(key) + "\n")
+          PY
 
       - uses: google-github-actions/auth@v2
         with:
@@ -84,30 +86,31 @@ jobs:
 
       - name: Load Terraform outputs into env
         run: |
-          OUT="terraform/outputs.json"
-          if [ ! -f "$OUT" ]; then
-            echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
-            exit 1
-          fi
-          # Strip BOM and CR (CRLF from Windows/Git checkout breaks jq)
-          CLEAN="$RUNNER_TEMP/tf_outputs.json"
-          sed '1s/^\xEF\xBB\xBF//' "$OUT" | tr -d '\r' > "$CLEAN"
-          if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
-            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' and commit (use LF line endings, not CRLF)."
-            exit 1
-          fi
-          GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
-          ARTIFACT_REPO_URL=$(jq -r '.artifact_repo_url.value // empty' "$CLEAN")
-          RUNTIME_SA=$(jq -r '.runtime_service_account.value // empty' "$CLEAN")
-          echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
-          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
-          echo "REGION=$(jq -r '.region.value // empty' "$CLEAN")" >> $GITHUB_ENV
-          echo "ARTIFACT_REPO_URL=$ARTIFACT_REPO_URL" >> $GITHUB_ENV
-          echo "RUNTIME_SERVICE_ACCOUNT=$RUNTIME_SA" >> $GITHUB_ENV
-          if [ -z "$GCP_PROJECT" ] || [ -z "$ARTIFACT_REPO_URL" ] || [ -z "$RUNTIME_SA" ]; then
-            echo "::error::Missing or invalid Terraform outputs in $OUT. Re-run 'terraform output -json > terraform/outputs.json' and commit."
-            exit 1
-          fi
+          python3 - << 'PY'
+          import json, os
+          out = "terraform/outputs.json"
+          if not os.path.isfile(out):
+            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
+            exit(1)
+          with open(out, encoding="utf-8-sig") as f:
+            raw = f.read().replace("\r", "")
+          try:
+            data = json.loads(raw)
+          except json.JSONDecodeError as e:
+            print("::error::" + out + " is not valid JSON:", e)
+            exit(1)
+          def v(k):
+            return (data.get(k) or {}).get("value") or ""
+          env_file = os.environ.get("GITHUB_ENV")
+          required = ["project_id", "artifact_repo_url", "runtime_service_account"]
+          for key in required:
+            if not v(key):
+              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/outputs.json' and commit.")
+              exit(1)
+          for name, key in [("GCP_PROJECT", "project_id"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("REGION", "region"), ("ARTIFACT_REPO_URL", "artifact_repo_url"), ("RUNTIME_SERVICE_ACCOUNT", "runtime_service_account")]:
+            with open(env_file, "a") as ef:
+              ef.write(name + "=" + v(key) + "\n")
+          PY
 
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
