@@ -162,3 +162,6 @@ terraform import google_service_account.runtime           projects/sabs-1000/ser
 
 terraform apply
 ```
+
+
+cd terraform && terraform output -json > outputs.json

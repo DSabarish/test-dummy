@@ -23,7 +23,8 @@ locals {
       "roles/artifactregistry.admin",
       "roles/bigquery.dataEditor",
       "roles/bigquery.jobUser",
-      "roles/iam.serviceAccountUser"
+      "roles/iam.serviceAccountUser",
+      "roles/run.admin"
     ])
     runtime_roles = try(local._raw.runtime_roles, [
       "roles/storage.objectViewer",
