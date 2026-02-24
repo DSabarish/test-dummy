@@ -22,12 +22,19 @@ jobs:
             echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
             exit 1
           fi
-          GCP_PROJECT=$(jq -r '.project_id.value // empty' $OUT)
-          TABLE_ID=$(jq -r '.table_id.value // empty' $OUT)
+          # Strip UTF-8 BOM if present (avoids jq parse error on Windows-generated files)
+          CLEAN="$RUNNER_TEMP/tf_outputs.json"
+          sed '1s/^\xEF\xBB\xBF//' "$OUT" > "$CLEAN"
+          if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
+            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' (no BOM) and commit."
+            exit 1
+          fi
+          GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
+          TABLE_ID=$(jq -r '.table_id.value // empty' "$CLEAN")
           echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
-          echo "DATA_BUCKET=$(jq -r '.data_bucket.value // empty' $OUT)" >> $GITHUB_ENV
-          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' $OUT)" >> $GITHUB_ENV
-          echo "DATASET_ID=$(jq -r '.dataset_id.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "DATA_BUCKET=$(jq -r '.data_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
+          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
+          echo "DATASET_ID=$(jq -r '.dataset_id.value // empty' "$CLEAN")" >> $GITHUB_ENV
           echo "TABLE_ID=$TABLE_ID" >> $GITHUB_ENV
           if [ -z "$GCP_PROJECT" ] || [ -z "$TABLE_ID" ]; then
             echo "::error::Missing or invalid Terraform outputs in $OUT. Re-run 'terraform output -json > terraform/outputs.json' and commit."
@@ -82,12 +89,19 @@ jobs:
             echo "::error::$OUT not found. Run 'cd terraform && terraform output -json > outputs.json' and commit."
             exit 1
           fi
-          GCP_PROJECT=$(jq -r '.project_id.value // empty' $OUT)
-          ARTIFACT_REPO_URL=$(jq -r '.artifact_repo_url.value // empty' $OUT)
-          RUNTIME_SA=$(jq -r '.runtime_service_account.value // empty' $OUT)
+          # Strip UTF-8 BOM if present (avoids jq parse error on Windows-generated files)
+          CLEAN="$RUNNER_TEMP/tf_outputs.json"
+          sed '1s/^\xEF\xBB\xBF//' "$OUT" > "$CLEAN"
+          if ! jq -e . "$CLEAN" >/dev/null 2>&1; then
+            echo "::error::$OUT is not valid JSON. Re-run 'cd terraform && terraform output -json > outputs.json' (no BOM) and commit."
+            exit 1
+          fi
+          GCP_PROJECT=$(jq -r '.project_id.value // empty' "$CLEAN")
+          ARTIFACT_REPO_URL=$(jq -r '.artifact_repo_url.value // empty' "$CLEAN")
+          RUNTIME_SA=$(jq -r '.runtime_service_account.value // empty' "$CLEAN")
           echo "GCP_PROJECT=$GCP_PROJECT" >> $GITHUB_ENV
-          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' $OUT)" >> $GITHUB_ENV
-          echo "REGION=$(jq -r '.region.value // empty' $OUT)" >> $GITHUB_ENV
+          echo "ARTIFACTS_BUCKET=$(jq -r '.artifacts_bucket.value // empty' "$CLEAN")" >> $GITHUB_ENV
+          echo "REGION=$(jq -r '.region.value // empty' "$CLEAN")" >> $GITHUB_ENV
           echo "ARTIFACT_REPO_URL=$ARTIFACT_REPO_URL" >> $GITHUB_ENV
           echo "RUNTIME_SERVICE_ACCOUNT=$RUNTIME_SA" >> $GITHUB_ENV
           if [ -z "$GCP_PROJECT" ] || [ -z "$ARTIFACT_REPO_URL" ] || [ -z "$RUNTIME_SA" ]; then
