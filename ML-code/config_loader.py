@@ -1,4 +1,11 @@
-"""Load config from repo root config.yaml (single source for Terraform and ML)."""
+"""
+Load config from repo root config.yaml (single source for Terraform and ML).
+
+Config structure: active_env + environments.{dev,qa,prod}.
+- Local: active_env in file selects the block.
+- CI: ACTIVE_ENV env var (set from branch) overrides; ML uses that block.
+"""
+import os
 from pathlib import Path
 
 import yaml
@@ -6,13 +13,16 @@ import yaml
 
 def _repo_root() -> Path:
     """Repo root: directory that contains ML-code/ and config.yaml."""
-    # This file is ML-code/config_loader.py, so parent is ML-code, parent.parent is repo root.
     root = Path(__file__).resolve().parent.parent
     return root
 
 
 def load_config() -> dict:
-    """Load config from repo root config.yaml. Adds computed keys for ML (buckets, SAs, repo URL)."""
+    """
+    Load config from repo root config.yaml.
+    Uses ACTIVE_ENV env var if set (CI), else active_env in file, else "dev".
+    Adds computed keys for ML (buckets, SAs, artifact_repo_url, feature_columns).
+    """
     root = _repo_root()
     config_path = root / "config.yaml"
     if not config_path.exists():
@@ -21,19 +31,28 @@ def load_config() -> dict:
             "Create it at repo root (single source for Terraform and ML)."
         )
     with config_path.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    if not isinstance(data, dict):
+        raw = yaml.safe_load(f) or {}
+    if not isinstance(raw, dict):
         raise ValueError("config.yaml must contain a mapping at the top level.")
 
-    # feature_columns = table_schema names except target_column; target_column stays as-is
+    # Resolve active environment: env var (CI) overrides file
+    active_env = os.environ.get("ACTIVE_ENV") or raw.get("active_env") or "dev"
+    if "environments" not in raw or active_env not in raw["environments"]:
+        raise ValueError(
+            f"config.yaml must have environments.{active_env}. "
+            f"Got active_env={active_env!r}, keys={list(raw.get('environments', {}).keys())!r}."
+        )
+    data = dict(raw["environments"][active_env])
+
+    # feature_columns = table_schema names except target_column
     target = data.get("target_column")
     if "table_schema" in data and isinstance(data["table_schema"], list):
         all_names = [c.get("name") for c in data["table_schema"] if c.get("name")]
         data["feature_columns"] = [n for n in all_names if n != target] if target else all_names
-    elif "feature_columns" not in data:
+    else:
         data["feature_columns"] = []
 
-    # Computed values (same naming as Terraform) so ML code can use data_bucket, etc.
+    # Computed values (same naming as Terraform) for ML
     prefix = data.get("prefix", "mlapp")
     environment = data.get("environment", "dev")
     project_id = data.get("project_id", "")

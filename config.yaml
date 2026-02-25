@@ -1,80 +1,332 @@
-# Master config — single source for Terraform and ML. See README.md.
-# Edit only here. feature_columns are derived from table_schema in ML code.
+# =============================================================================
+# MASTER CONFIG — single source of truth for Terraform, ML, and CI/CD.
+# All three environments are defined here. Only change `active_env` to switch.
+# CI/CD can override via: terraform apply -var="active_env=prod"
+# Sections per env: (1) Project & env  (2) Terraform only  (3) Shared  (4) ML only  (5) CI/CD
+# =============================================================================
 
-# --- GCP & naming (used by Terraform and ML) ---
-# project_id: "sabs-dev-100"
-# project_id: "sabs-dev1-100"
-# project_id: "sabs-dev2-100"
-# project_id: "sabs-dev3-100"
-project_id: "sabs-dev4-100"
-region: "asia-south1"
-environment: "dev"
-prefix: "mlapp"
+active_env: "dev"   # Switch to "qa" or "prod" to change active environment.
+                    # In CI/CD pipelines, override this via TF var — never edit this manually in prod.
 
-# --- BigQuery ---
-dataset_id: "training_dataset_dev"
-table_id: "features_table"
-dataset_location: "asia-south1"
+environments:
 
-# --- BigQuery table schema (single source: Terraform + ML; feature_columns = all except target_column) ---
-table_schema:
-  - name: "f1"
-    type: "FLOAT"
-    mode: "NULLABLE"
-  - name: "f2"
-    type: "FLOAT"
-    mode: "NULLABLE"
-  - name: "f3"
-    type: "FLOAT"
-    mode: "NULLABLE"
-  - name: "f4"
-    type: "FLOAT"
-    mode: "NULLABLE"
-  - name: "f5"
-    type: "FLOAT"
-    mode: "NULLABLE"
-  - name: "T"
-    type: "FLOAT"
-    mode: "NULLABLE"
+# =============================================================================
+# DEV — 2 to 4 users, engineers only, throwaway infra, fast iteration.
+# Everything is deletable. Short retention. Cheap. No safety nets by design.
+# =============================================================================
+  dev:
 
-# Which table_schema column is the target (rest are feature_columns)
-target_column: "T"
+    # --- SECTION 1: Project & environment ---
+    project_id: "sabs-dev4-100"
+    region: "asia-south1"
+    environment: "dev"
+    prefix: "mlapp"
 
-# --- GCS paths for ML (versioned data and models) ---
-data_gcs_prefix: "data"
-models_gcs_prefix: "models"
-model_filename: "model.joblib"
-latest_subfolder: "latest"
+    # --- SECTION 2: Terraform/Infra only ---
+    labels:
+      owner: "ml-team"
+      environment: "dev"
 
-# --- Terraform: labels and options ---
-labels:
-  owner: "ml-team"
-  environment: "dev"
+    # DECISION: true — dev infra is throwaway. Engineers need to be able to
+    # wipe and recreate freely without manual GCP console intervention.
+    dataset_delete_on_destroy: true
+    bucket_force_destroy: true
 
-dataset_delete_on_destroy: true
-bucket_force_destroy: true
-bucket_storage_class: "STANDARD"
+    # DECISION: STANDARD — dev has negligible data volume, no point optimizing
+    # storage class for cost at this scale (2-4 users).
+    bucket_storage_class: "STANDARD"
 
-artifacts_retention_days: 7
-data_retention_days: 3
+    # DECISION: very short — dev models and data are experimental, no value in
+    # keeping them around. Keeps GCS costs near zero.
+    artifacts_retention_days: 7
+    data_retention_days: 3
 
-# --- Terraform: Artifact Registry ---
-artifact_format: "DOCKER"
-artifact_description: "Artifact repository"
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — dev"
 
-# --- CI/CD: push to next branch after deploy (optional) ---
-push_to_next_branch: true
-next_branch_name: "qa"
+    # Cloud Run sizing & scaling (dev): small, cost-optimized, OK to scale to zero.
+    # The below values are for CD-Cloud run section in cicd.yml. Not for Terraform..
+    cloud_run:
+      min_instances: 0        # allow scale-to-zero in dev
+      max_instances: 2        # small max; few concurrent testers
+      cpu: 1                  # 1 vCPU per instance
+      memory: "512Mi"         # enough for small model
+      timeout_seconds: 300    # 5 minutes; generous for experiments
+      concurrency: 80         # default high concurrency
+
+    # DECISION: full admin roles for cicd in dev — engineers need to iterate
+    # fast without hitting permission walls. Acceptable risk in an isolated project.
+    cicd_roles:
+      - "roles/storage.admin"
+      - "roles/artifactregistry.admin"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    # DECISION: minimal read-only runtime roles — even in dev, runtime SA should
+    # not have write access. Good habit to enforce from day one.
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    # --- SECTION 3: Shared (Terraform + ML) ---
+    dataset_id: "training_dataset_dev"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    # DECISION: schema is identical across all envs intentionally — QA and prod
+    # must validate against the same structure as dev. Never diverge schema per env.
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f3"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f4"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f5"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+
+    # --- SECTION 4: ML only ---
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    # --- SECTION 5: CI/CD ---
+    # DECISION: push to next branch enabled — dev is the start of the promotion
+    # chain. A successful dev deploy auto-triggers QA pipeline.
+    push_to_next_branch: true
+    next_branch_name: "qa"
 
 
-# --- Terraform: IAM roles (optional; omit to use Terraform defaults) ---
-# cicd_roles:
-#   - "roles/storage.admin"
-#   - "roles/artifactregistry.admin"
-#   - "roles/bigquery.dataEditor"
-#   - "roles/bigquery.jobUser"
-#   - "roles/iam.serviceAccountUser"
-# runtime_roles:
-#   - "roles/storage.objectViewer"
-#   - "roles/bigquery.dataViewer"
-#   - "roles/bigquery.jobUser"
+# =============================================================================
+# QA — ~10 users, testers + stakeholders, semi-stable infra, realistic data.
+# Some safety nets enabled. Longer retention for debugging failed test runs.
+# =============================================================================
+  qa:
+
+    # --- SECTION 1: Project & environment ---
+    project_id: "sabs-qa4-100"
+    region: "asia-south1"
+    environment: "qa"
+    prefix: "mlapp"
+
+    # --- SECTION 2: Terraform/Infra only ---
+    labels:
+      owner: "ml-team"
+      environment: "qa"
+
+    # DECISION: false — QA testers and stakeholders run tests against this env.
+    # Accidental `terraform destroy` should NOT silently wipe their test datasets.
+    # Force a manual `terraform destroy -target` if cleanup is truly needed.
+    dataset_delete_on_destroy: false
+    bucket_force_destroy: false
+
+    # DECISION: STANDARD — QA data volume is still modest (10 users), but data
+    # should survive for a reasonable window to debug test failures.
+    bucket_storage_class: "STANDARD"
+
+    # DECISION: 14 days for models — long enough to compare model versions across
+    # a sprint cycle (typically 2 weeks). Short enough to avoid storage bloat.
+    artifacts_retention_days: 14
+    # DECISION: 7 days for data — gives testers a full week to investigate a
+    # pipeline failure before the data is gone.
+    data_retention_days: 7
+
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — qa"
+
+    # Cloud Run sizing & scaling (qa): closer to prod, but can still scale down.
+    # The below values are for CD-Cloud run section in cicd.yml. Not for Terraform..
+    cloud_run:
+      min_instances: 0        # can scale to zero when idle
+      max_instances: 5        # more load than dev, still limited
+      cpu: 1
+      memory: "1Gi"
+      timeout_seconds: 300
+      concurrency: 80
+
+    # DECISION: same cicd roles as dev — CI/CD still needs to deploy freely.
+    # The safety comes from bucket_force_destroy:false, not from restricting CI/CD.
+    cicd_roles:
+      - "roles/storage.admin"
+      - "roles/artifactregistry.admin"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    # DECISION: same minimal runtime roles — runtime SA never needs write access
+    # regardless of environment.
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    # --- SECTION 3: Shared (Terraform + ML) ---
+    # DECISION: dataset name reflects env — avoids any accidental cross-env BQ queries.
+    dataset_id: "training_dataset_qa"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f3"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f4"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f5"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+
+    # --- SECTION 4: ML only ---
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    # --- SECTION 5: CI/CD ---
+    # DECISION: push to next branch enabled — a green QA pipeline promotes to prod.
+    # This is the gate: if QA fails, next_branch push is blocked by the pipeline itself.
+    push_to_next_branch: true
+    next_branch_name: "prod"
+
+
+# =============================================================================
+# PROD — ~100 users, live traffic, real data. Full safety nets. No auto-deletion.
+# Long retention for compliance and debugging. Tightly scoped IAM.
+# =============================================================================
+  prod:
+
+    # --- SECTION 1: Project & environment ---
+    project_id: "sabs-prod4-100"
+    region: "asia-south1"
+    environment: "prod"
+    prefix: "mlapp"
+
+    # --- SECTION 2: Terraform/Infra only ---
+    labels:
+      owner: "ml-team"
+      environment: "prod"
+
+    # DECISION: false — non-negotiable in prod. A `terraform destroy` must never
+    # silently delete live datasets or buckets. Terraform will error and block.
+    dataset_delete_on_destroy: false
+    bucket_force_destroy: false
+
+    # DECISION: STANDARD — at 100 users the data access frequency is high enough
+    # that STANDARD is still cheaper than NEARLINE (which charges for retrieval).
+    # Revisit if models bucket access drops below ~1x/month per object.
+    bucket_storage_class: "STANDARD"
+
+    # DECISION: 90 days for models — long enough for compliance, rollback, and
+    # post-incident investigation. Covers ~3 sprint cycles with headroom.
+    artifacts_retention_days: 90
+    # DECISION: 30 days for data — balances storage cost vs debugging window.
+    # Adjust up if your org has a compliance requirement (e.g. 90/180 days).
+    data_retention_days: 30
+
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — prod"
+
+    # Cloud Run sizing & scaling (prod): always-on baseline, higher capacity.
+    # The below values are for CD-Cloud run section in cicd.yml. Not for Terraform..
+    cloud_run:
+      min_instances: 1        # keep at least one warm instance
+      max_instances: 20       # cap autoscaling based on expected prod load
+      cpu: 1
+      memory: "1Gi"
+      timeout_seconds: 300
+      concurrency: 80
+
+    # DECISION: tightened cicd roles in prod — storage.objectAdmin instead of
+    # storage.admin (removes bucket-level IAM changes from CI/CD SA).
+    # artifactregistry.writer instead of admin (CI/CD only needs to push images).
+    # This limits the blast radius if the CI/CD SA is ever compromised.
+    cicd_roles:
+      - "roles/storage.objectAdmin"
+      - "roles/artifactregistry.writer"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    # DECISION: same minimal runtime roles — identical across all envs.
+    # Runtime SA in prod must never have more than read access.
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    # --- SECTION 3: Shared (Terraform + ML) ---
+    dataset_id: "training_dataset_prod"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f3"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f4"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f5"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+
+    # --- SECTION 4: ML only ---
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    # --- SECTION 5: CI/CD ---
+    # DECISION: false — prod is the end of the promotion chain. There is no
+    # "next" branch to push to. Disabling prevents accidental config drift
+    # if someone forks the pipeline without reading this.
+    push_to_next_branch: false
+    next_branch_name: ""
+
+# -----------------------------------------------------------------------------
+# Platform / infrastructure (optional) — uncomment per env when wiring in CI/TF
+# Cloud Run: min_instances, max_instances, cpu, memory, timeout, concurrency, etc.
+# BigQuery: time_partitioning_field, clustering_fields. GCS: versioning. AR: cleanup.
+# See README for the full commented block if removed from here.
+# -----------------------------------------------------------------------------

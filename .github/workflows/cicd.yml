@@ -1,8 +1,9 @@
 name: ML Pipeline & Deploy (CI/CD)
 
+# Runs on dev, qa, prod. ACTIVE_ENV is set from branch name so config.yaml picks the right env block.
 on:
   push:
-    branches: [dev]
+    branches: [dev, qa, prod]
   workflow_dispatch:
 
 env:
@@ -14,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Set active environment from branch (dev/qa/prod). ML config_loader uses ACTIVE_ENV.
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Load Terraform outputs into env
         run: |
@@ -69,6 +74,7 @@ jobs:
       - name: Run ML pipeline
         run: python ML-code/run_pipeline.py
         env:
+          ACTIVE_ENV:       ${{ env.ACTIVE_ENV }}
           GCP_PROJECT:      ${{ env.GCP_PROJECT }}
           DATA_BUCKET:      ${{ env.DATA_BUCKET }}
           ARTIFACTS_BUCKET: ${{ env.ARTIFACTS_BUCKET }}
@@ -94,6 +100,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Load Terraform outputs into env
         run: |
@@ -134,6 +143,43 @@ jobs:
               ef.write(name + "=" + v(key) + "\n")
           PY
 
+      - name: Load Cloud Run config from config.yaml
+        run: |
+          pip install --quiet pyyaml
+          python3 - << 'PY'
+          import os
+          import yaml
+
+          active_env = os.environ.get("ACTIVE_ENV", "dev").strip()
+          with open("config.yaml", "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+
+          envs = data.get("environments") or {}
+          block = envs.get(active_env) or {}
+          cr = block.get("cloud_run") or {}
+
+          def get(key, default):
+            v = cr.get(key)
+            return str(default if v is None else v)
+
+          # Sensible defaults if a field is missing for an env.
+          min_instances = get("min_instances", 0)
+          max_instances = get("max_instances", 10)
+          cpu = get("cpu", 1)
+          memory = cr.get("memory") or "512Mi"
+          timeout_seconds = get("timeout_seconds", 300)
+          concurrency = get("concurrency", 80)
+
+          env_file = os.environ["GITHUB_ENV"]
+          with open(env_file, "a") as ef:
+            ef.write(f"CR_MIN_INSTANCES={min_instances}\n")
+            ef.write(f"CR_MAX_INSTANCES={max_instances}\n")
+            ef.write(f"CR_CPU={cpu}\n")
+            ef.write(f"CR_MEMORY={memory}\n")
+            ef.write(f"CR_TIMEOUT_SECONDS={timeout_seconds}\n")
+            ef.write(f"CR_CONCURRENCY={concurrency}\n")
+          PY
+
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -155,13 +201,29 @@ jobs:
 
       - name: Deploy Cloud Run
         run: |
+          # Cloud Run deployment flags (per env from config.yaml):
+          # --image            : commit-SHA image in Artifact Registry
+          # --region           : region from Terraform outputs
+          # --service-account  : runtime SA from Terraform outputs
+          # --set-env-vars     : app config (project, bucket, ACTIVE_ENV)
+          # --min-instances    : baseline instances to keep warm (per env)
+          # --max-instances    : max autoscaled instances (per env)
+          # --cpu / --memory   : instance sizing for model inference (per env)
+          # --timeout          : request timeout in seconds
+          # --concurrency      : how many requests each instance handles in parallel
           gcloud run deploy app \
             --image "${{ env.IMAGE }}" \
             --region "${{ env.REGION }}" \
             --platform managed \
             --allow-unauthenticated \
             --service-account "${{ env.RUNTIME_SERVICE_ACCOUNT }}" \
-            --set-env-vars "GCP_PROJECT=${{ env.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ env.ARTIFACTS_BUCKET }}"
+            --set-env-vars "GCP_PROJECT=${{ env.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ env.ARTIFACTS_BUCKET }},ACTIVE_ENV=${{ env.ACTIVE_ENV }}" \
+            --min-instances "${{ env.CR_MIN_INSTANCES }}" \
+            --max-instances "${{ env.CR_MAX_INSTANCES }}" \
+            --cpu "${{ env.CR_CPU }}" \
+            --memory "${{ env.CR_MEMORY }}" \
+            --timeout "${{ env.CR_TIMEOUT_SECONDS }}" \
+            --concurrency "${{ env.CR_CONCURRENCY }}"
         env:
           CLOUDSDK_CORE_PROJECT: ${{ env.GCP_PROJECT }}
 
@@ -178,28 +240,46 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Read config and check push_to_next_branch
-        id: config
+      # Active env = branch name (dev/qa/prod). CI/CD options are per-env in config.yaml.
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Read per-env CI/CD config (push_to_next_branch, next_branch_name)
         run: |
+          pip install --quiet pyyaml
           python3 - << 'PY'
-          import re, os
+          import os
+          import yaml
+
+          active_env = os.environ.get("ACTIVE_ENV", "dev").strip()
           with open("config.yaml", "r", encoding="utf-8") as f:
-            c = f.read()
-          m = re.search(r"push_to_next_branch:\s*(true|false)", c, re.I)
-          push = m.group(1).lower() == "true" if m else False
-          m2 = re.search(r'next_branch_name:\s*["\']?([a-zA-Z0-9_\-]+)["\']?', c)
-          next_branch = (m2.group(1).strip() if m2 else "") or "qa"
-          env_file = os.environ.get("GITHUB_ENV")
-          with open(env_file, "a") as ef:
+            data = yaml.safe_load(f) or {}
+
+          environments = data.get("environments") or {}
+          if active_env not in environments:
+            print(f"::warning::environments.{active_env} not in config.yaml; skipping push-code.")
+            with open(os.environ["GITHUB_ENV"], "a") as ef:
+              ef.write("PUSH_TO_NEXT_BRANCH=false\n")
+              ef.write("NEXT_BRANCH_NAME=\n")
+            exit(0)
+
+          block = environments[active_env]
+          push = block.get("push_to_next_branch") is True
+          next_branch = (block.get("next_branch_name") or "").strip()
+
+          if not push:
+            print(f"push_to_next_branch is false for env={active_env}; skipping push-code.")
+          elif not next_branch:
+            print(f"next_branch_name is empty for env={active_env}; skipping push-code.")
+            push = False
+
+          with open(os.environ["GITHUB_ENV"], "a") as ef:
             ef.write(f"PUSH_TO_NEXT_BRANCH={str(push).lower()}\n")
             ef.write(f"NEXT_BRANCH_NAME={next_branch}\n")
-          if not push:
-            print("push_to_next_branch is not true; skipping push-code.")
-            exit(0)
           PY
 
       - name: Fetch and push to next branch
-        if: env.PUSH_TO_NEXT_BRANCH == 'true'
+        if: env.PUSH_TO_NEXT_BRANCH == 'true' && env.NEXT_BRANCH_NAME != ''
         run: |
           CURRENT="${{ github.ref_name }}"
           NEXT="${{ env.NEXT_BRANCH_NAME }}"

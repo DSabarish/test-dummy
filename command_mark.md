@@ -1,7 +1,7 @@
 # Golden path — full execution script (PowerShell)
 
 Run these blocks **line by line** from the repo root (folder that contains `config.yaml` and `terraform/`).  
-Set `$PROJECT_ID` to match `project_id` in `config.yaml`.
+**config.yaml** is the master config: `active_env` + `environments.dev|qa|prod`. Each env has 5 sections (project, Terraform, shared, ML, CI/CD). Set `$PROJECT_ID` to match `project_id` for the target env. See README.
 
 ---
 
@@ -94,8 +94,8 @@ terraform init -reconfigure
 ## 6. Plan
 
 ```powershell
-terraform plan
-# All inputs come from root config.yaml (no -var-file)
+# Use -var="active_env=dev" (or qa/prod) to target an environment. Omit to use active_env in config.yaml.
+terraform plan -var="active_env=dev"
 ```
 
 Verify: all resources show `project = $PROJECT_ID` and plan summary looks correct.
@@ -105,15 +105,15 @@ Verify: all resources show `project = $PROJECT_ID` and plan summary looks correc
 ## 7. Apply
 
 ```powershell
-terraform apply
-# Type 'yes' when prompted
+terraform apply -var="active_env=dev"
+# Type 'yes' when prompted. For qa/prod use -var="active_env=qa" or -var="active_env=prod".
 ```
 
 ---
 
 ## 8. Export outputs for CI/CD
 
-CI/CD reads **`terraform/terraform-output.json`** (no secrets). After every `terraform apply`, generate and commit it:
+CI/CD reads **`terraform/terraform-output.json`** (no secrets). After every `terraform apply` (per env), generate and commit it:
 
 ```powershell
 # From terraform/ directory (you are already there after apply)
@@ -153,6 +153,7 @@ terraform apply -auto-approve
 Run from `terraform/`. Replace `sabs-1000` with your `$PROJECT_ID` if different.
 
 ```powershell
+# Replace sabs-1000 and dev with your project_id and environment.
 terraform import google_artifact_registry_repository.repo projects/sabs-1000/locations/asia-south1/repositories/mlapp-dev-repo
 terraform import google_bigquery_dataset.dataset          projects/sabs-1000/datasets/training_dataset_dev
 terraform import google_bigquery_table.table             projects/sabs-1000/datasets/training_dataset_dev/tables/features_table
@@ -161,8 +162,5 @@ terraform import google_storage_bucket.data              mlapp-dev-data-sabs-100
 terraform import google_service_account.cicd             projects/sabs-1000/serviceAccounts/mlapp-dev-cicd@sabs-1000.iam.gserviceaccount.com
 terraform import google_service_account.runtime           projects/sabs-1000/serviceAccounts/mlapp-dev-runtime@sabs-1000.iam.gserviceaccount.com
 
-terraform apply
+terraform apply -var="active_env=dev"
 ```
-
-
-cd terraform && terraform output -json > terraform-output.json
