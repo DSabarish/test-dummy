@@ -62,6 +62,10 @@ data_retention_days: 3
 artifact_format: "DOCKER"
 artifact_description: "Artifact repository"
 
+# --- CI/CD: push to next branch after deploy (optional) ---
+# push_to_next_branch: true
+# next_branch_name: "qa"
+
 # --- Terraform: IAM roles (optional; omit to use Terraform defaults) ---
 # cicd_roles:
 #   - "roles/storage.admin"

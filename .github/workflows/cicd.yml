@@ -164,3 +164,55 @@ jobs:
             --set-env-vars "GCP_PROJECT=${{ env.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ env.ARTIFACTS_BUCKET }}"
         env:
           CLOUDSDK_CORE_PROJECT: ${{ env.GCP_PROJECT }}
+
+  push-code:
+    name: Push to next branch
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (with push permission)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Read config and check push_to_next_branch
+        id: config
+        run: |
+          python3 - << 'PY'
+          import re, os
+          with open("config.yaml", "r", encoding="utf-8") as f:
+            c = f.read()
+          m = re.search(r"push_to_next_branch:\s*(true|false)", c, re.I)
+          push = m.group(1).lower() == "true" if m else False
+          m2 = re.search(r'next_branch_name:\s*["\']?([a-zA-Z0-9_\-]+)["\']?', c)
+          next_branch = (m2.group(1).strip() if m2 else "") or "qa"
+          env_file = os.environ.get("GITHUB_ENV")
+          with open(env_file, "a") as ef:
+            ef.write(f"PUSH_TO_NEXT_BRANCH={str(push).lower()}\n")
+            ef.write(f"NEXT_BRANCH_NAME={next_branch}\n")
+          if not push:
+            print("push_to_next_branch is not true; skipping push-code.")
+            exit(0)
+          PY
+
+      - name: Fetch and push to next branch
+        if: env.PUSH_TO_NEXT_BRANCH == 'true'
+        run: |
+          CURRENT="${{ github.ref_name }}"
+          NEXT="${{ env.NEXT_BRANCH_NAME }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+          if git branch -r | grep -q "origin/$NEXT"; then
+            echo "Branch origin/$NEXT exists: merge $CURRENT into $NEXT and push."
+            git checkout "$NEXT"
+            git merge "$CURRENT" -m "chore: merge $CURRENT into $NEXT [skip ci]"
+            git push origin "$NEXT"
+          else
+            echo "Branch $NEXT does not exist: create from $CURRENT and push."
+            git checkout -b "$NEXT"
+            git push -u origin "$NEXT"
+          fi
