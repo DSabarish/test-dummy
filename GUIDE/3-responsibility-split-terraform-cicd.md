@@ -1,5 +1,14 @@
 # Terraform Implementation Guide <img src="./logo.png" alt="DataNeurus logo" align="right" width="150" />
 
+## Terraform + CI/CD: Infrastructure as Code for ML/AI/Data Projects
+
+> **Document Type:** Internal Engineering Reference  
+> **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
+> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
+> **Last Updated:** 2025
+
+---
+
 ## Table of Contents
 
 1. [Introduction](1-introduction.md)
@@ -11,6 +20,10 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+
+---
+
+**Part 3 · Responsibility Split: Terraform vs CI/CD** · [← Index](README.md)
 
 ---
 
@@ -32,30 +45,29 @@ One of the most important architectural decisions in any DataNeurus project is u
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Responsibility Comparison Table (chronological order of execution)
+### 3.2 Responsibility Comparison Table
 
-| Step | Concern | Owner | Why |
-|---|---|---|---|
-| 1 | GCP APIs (enablement) | **Terraform** | One-time setup, tracked in state |
-| 2 | Service Accounts | **Terraform** | IAM is security-critical; must be versioned |
-| 3 | IAM Roles & Bindings | **Terraform** | Security policy must be auditable |
-| 4 | GCS Bucket (data) | **Terraform** | Persistent resource, needs state tracking |
-| 5 | GCS Bucket (artifacts) | **Terraform** | Persistent resource, needs state tracking |
-| 6 | BigQuery Dataset | **Terraform** | Persistent resource, schema-managed |
-| 7 | BigQuery Table | **Terraform** | Schema lives in `config.yaml`, managed declaratively |
-| 8 | Artifact Registry (Docker repo) | **Terraform** | Persistent resource |
-| 9 | Generating `terraform-output.json` | **Both** | Terraform produces it; CI/CD consumes it |
-| 10 | Running `pytest` | **CI/CD** | Testing is a CI/CD responsibility |
-| 11 | ML Pipeline execution | **CI/CD** | Operational/application concern |
-| 12 | Docker image build | **CI/CD** | App-layer concern |
-| 13 | Docker image push | **CI/CD** | App-layer concern |
-| 14 | Cloud Run Service | **CI/CD** | Application concern; image changes with every deploy |
-| 15 | Branch promotion (dev→qa→prod) | **CI/CD** | Workflow automation |
+| Concern | Owner | Why |
+|---|---|---|
+| GCP APIs (enablement) | **Terraform** | One-time setup, tracked in state |
+| Service Accounts | **Terraform** | IAM is security-critical; must be versioned |
+| IAM Roles & Bindings | **Terraform** | Security policy must be auditable |
+| GCS Bucket (data) | **Terraform** | Persistent resource, needs state tracking |
+| GCS Bucket (artifacts) | **Terraform** | Persistent resource, needs state tracking |
+| BigQuery Dataset | **Terraform** | Persistent resource, schema-managed |
+| BigQuery Table | **Terraform** | Schema lives in `config.yaml`, managed declaratively |
+| Artifact Registry (Docker repo) | **Terraform** | Persistent resource |
+| Generating `terraform-output.json` | **Both** | Terraform produces it; CI/CD consumes it |
+| Running `pytest` | **CI/CD** | Testing is a CI/CD responsibility |
+| ML Pipeline execution | **CI/CD** | Operational/application concern |
+| Docker image build | **CI/CD** | App-layer concern |
+| Docker image push | **CI/CD** | App-layer concern |
+| Cloud Run Service | **CI/CD** | Application concern; image changes with every deploy |
+| Branch promotion (dev→qa→prod) | **CI/CD** | Workflow automation |
 
 ### 3.3 The Bridge: `terraform-output.json`
 
 The handoff between Terraform and CI/CD happens through a **committed output file**:
-
 
 ![picture1](picture1.png)
 
@@ -83,3 +95,5 @@ The handoff between Terraform and CI/CD happens through a **committed output fil
 > ✅ **This is the only "bridge" between Terraform and CI/CD. No other values should be hardcoded in GitHub Secrets (except `GCP_SA_KEY`).**
 
 ---
+
+[← Previous: Why Terraform Instead of Python + GCP SDK](2-why-terraform-python-gcp-sdk.md) · [Index](README.md) · [Next: Terraform Project Structure →](4-terraform-project-structure.md)

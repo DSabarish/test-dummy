@@ -1,5 +1,14 @@
 # Terraform Implementation Guide <img src="./logo.png" alt="DataNeurus logo" align="right" width="150" />
 
+## Terraform + CI/CD: Infrastructure as Code for ML/AI/Data Projects
+
+> **Document Type:** Internal Engineering Reference  
+> **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
+> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
+> **Last Updated:** 2025
+
+---
+
 ## Table of Contents
 
 1. [Introduction](1-introduction.md)
@@ -11,6 +20,10 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+
+---
+
+**Part 1 · Introduction** · [← Index](README.md)
 
 ---
 
@@ -140,3 +153,5 @@ Together, they form a **complete, automated system** where:
 > 💡 **The key insight:** Terraform is *not* a replacement for CI/CD. It is the layer underneath it. CI/CD deploys *applications*. Terraform manages the *infrastructure those applications run on*.
 
 ---
+
+[← Index](README.md) · [Next: Why Terraform Instead of Python + GCP SDK →](2-why-terraform-python-gcp-sdk.md)

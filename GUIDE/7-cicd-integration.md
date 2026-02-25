@@ -1,5 +1,14 @@
 # Terraform Implementation Guide <img src="./logo.png" alt="DataNeurus logo" align="right" width="150" />
 
+## Terraform + CI/CD: Infrastructure as Code for ML/AI/Data Projects
+
+> **Document Type:** Internal Engineering Reference  
+> **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
+> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
+> **Last Updated:** 2025
+
+---
+
 ## Table of Contents
 
 1. [Introduction](1-introduction.md)
@@ -11,6 +20,10 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+
+---
+
+**Part 7 · CI/CD Integration** · [← Index](README.md)
 
 ---
 
@@ -222,3 +235,5 @@ After a successful deploy to `dev`, CI/CD automatically merges code to `qa`. Aft
 > ⚠️ **Guard:** The workflow trigger is restricted to exactly `[dev, qa, prod]`. Feature branches do not trigger the pipeline.
 
 ---
+
+[← Previous: Terraform Workflow](6-terraform-workflow.md) · [Index](README.md) · [Next: Maintenance & Scaling →](8-maintenance-scaling.md)

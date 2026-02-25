@@ -11,15 +11,15 @@
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)
-2. [Why Terraform Instead of Python + GCP SDK](#2-why-terraform-instead-of-python--gcp-sdk)
-3. [Responsibility Split: Terraform vs CI/CD](#3-responsibility-split-terraform-vs-cicd)
-4. [Terraform Project Structure](#4-terraform-project-structure)
-5. [Terraform Code Walkthrough](#5-terraform-code-walkthrough)
-6. [Terraform Workflow](#6-terraform-workflow)
-7. [CI/CD Integration](#7-cicd-integration)
-8. [Maintenance & Scaling](#8-maintenance--scaling)
-9. [Quick Reference Cheatsheet](#9-quick-reference-cheatsheet)
+1. [Introduction](1-introduction.md)
+2. [Why Terraform Instead of Python + GCP SDK](2-why-terraform-python-gcp-sdk.md)
+3. [Responsibility Split: Terraform vs CI/CD](3-responsibility-split-terraform-cicd.md)
+4. [Terraform Project Structure](4-terraform-project-structure.md)
+5. [Terraform Code Walkthrough](5-terraform-code-walkthrough.md)
+6. [Terraform Workflow](6-terraform-workflow.md)
+7. [CI/CD Integration](7-cicd-integration.md)
+8. [Maintenance & Scaling](8-maintenance-scaling.md)
+9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
 
 ---
 

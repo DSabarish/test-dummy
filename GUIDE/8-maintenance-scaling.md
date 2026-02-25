@@ -1,5 +1,14 @@
 # Terraform Implementation Guide <img src="./logo.png" alt="DataNeurus logo" align="right" width="150" />
 
+## Terraform + CI/CD: Infrastructure as Code for ML/AI/Data Projects
+
+> **Document Type:** Internal Engineering Reference  
+> **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
+> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
+> **Last Updated:** 2025
+
+---
+
 ## Table of Contents
 
 1. [Introduction](1-introduction.md)
@@ -11,6 +20,10 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+
+---
+
+**Part 8 · Maintenance & Scaling** · [← Index](README.md)
 
 ---
 
@@ -240,29 +253,29 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                    config.yaml                              │    │
-│  │              (Single source of truth)                       │    │
+│  │              (Single source of truth)                        │    │
 │  └──────────────────┬───────────────────────┬──────────────────┘    │
 │                     │                       │                       │
 │                     ▼                       ▼                       │
 │         ┌────────────────────┐   ┌──────────────────────────┐       │
-│         │     TERRAFORM      │   │       ML CODE            │       │
-│         │                    │   │  (config_loader.py)      │       │
-│         │  Creates infra:    │   │                          │       │
-│         │  - GCS buckets     │   │  Uses ACTIVE_ENV to      │       │
-│         │  - BigQuery        │   │  load the right env      │       │
-│         │  - Artifact Reg.   │   │  block from config.yaml  │       │
+│         │     TERRAFORM      │   │       ML CODE             │       │
+│         │                    │   │  (config_loader.py)       │       │
+│         │  Creates infra:    │   │                           │       │
+│         │  - GCS buckets     │   │  Uses ACTIVE_ENV to       │       │
+│         │  - BigQuery        │   │  load the right env        │       │
+│         │  - Artifact Reg.   │   │  block from config.yaml   │       │
 │         │  - Service Accts   │   └──────────────────────────┘       │
 │         └──────────┬─────────┘                                      │
 │                    │ terraform output -json                          │
 │                    ▼                                                 │
 │         ┌────────────────────┐                                      │
 │         │ terraform-output   │◄── Committed to Git repo             │
-│         │     .json          │    No secrets inside                 │
+│         │     .json          │    No secrets inside                  │
 │         └──────────┬─────────┘                                      │
 │                    │ CI/CD reads this file                          │
 │                    ▼                                                 │
 │         ┌────────────────────┐                                      │
-│         │   GITHUB ACTIONS   │◄── Only secret: GCP_SA_KEY          │
+│         │   GITHUB ACTIONS   │◄── Only secret: GCP_SA_KEY           │
 │         │                    │                                      │
 │         │  Reads outputs →   │                                      │
 │         │  Sets env vars →   │                                      │
@@ -274,3 +287,5 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
 ```
 
 ---
+
+[← Previous: CI/CD Integration](7-cicd-integration.md) · [Index](README.md) · [Next: Quick Reference Cheatsheet →](9-quick-reference-cheatsheet.md)
