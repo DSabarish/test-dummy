@@ -24,6 +24,7 @@ gcloud version
 $env:GOOGLE_APPLICATION_CREDENTIALS = ""
 ```
 
+
 ---
 
 ## 3. Authentication & project setup
