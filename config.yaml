@@ -1,4 +1,4 @@
-# Master config — single source for Terraform and ML. See CONFIG.md.
+# Master config — single source for Terraform and ML. See README.md.
 # Edit only here. feature_columns are derived from table_schema in ML code.
 
 # --- GCP & naming (used by Terraform and ML) ---
@@ -63,8 +63,9 @@ artifact_format: "DOCKER"
 artifact_description: "Artifact repository"
 
 # --- CI/CD: push to next branch after deploy (optional) ---
-# push_to_next_branch: true
-# next_branch_name: "qa"
+push_to_next_branch: true
+next_branch_name: "qa"
+
 
 # --- Terraform: IAM roles (optional; omit to use Terraform defaults) ---
 # cicd_roles:

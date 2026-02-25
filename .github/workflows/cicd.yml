@@ -19,9 +19,9 @@ jobs:
         run: |
           python3 - << 'PY'
           import json, os
-          out = "terraform/outputs.json"
+          out = "terraform/terraform-output.json"
           if not os.path.isfile(out):
-            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
+            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > terraform-output.json' and commit.")
             exit(1)
           with open(out, "rb") as f:
             raw_bytes = f.read().replace(b"\x00", b"")
@@ -47,7 +47,7 @@ jobs:
           required = ["project_id", "table_id"]
           for key in required:
             if not v(key):
-              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/outputs.json' and commit.")
+              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/terraform-output.json' and commit.")
               exit(1)
           for name, key in [("GCP_PROJECT", "project_id"), ("DATA_BUCKET", "data_bucket"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("DATASET_ID", "dataset_id"), ("TABLE_ID", "table_id")]:
             with open(env_file, "a") as ef:
@@ -99,9 +99,9 @@ jobs:
         run: |
           python3 - << 'PY'
           import json, os
-          out = "terraform/outputs.json"
+          out = "terraform/terraform-output.json"
           if not os.path.isfile(out):
-            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > outputs.json' and commit.")
+            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > terraform-output.json' and commit.")
             exit(1)
           with open(out, "rb") as f:
             raw_bytes = f.read().replace(b"\x00", b"")
@@ -127,7 +127,7 @@ jobs:
           required = ["project_id", "artifact_repo_url", "runtime_service_account"]
           for key in required:
             if not v(key):
-              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/outputs.json' and commit.")
+              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/terraform-output.json' and commit.")
               exit(1)
           for name, key in [("GCP_PROJECT", "project_id"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("REGION", "region"), ("ARTIFACT_REPO_URL", "artifact_repo_url"), ("RUNTIME_SERVICE_ACCOUNT", "runtime_service_account")]:
             with open(env_file, "a") as ef:

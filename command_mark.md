@@ -113,15 +113,15 @@ terraform apply
 
 ## 8. Export outputs for CI/CD
 
-CI/CD reads **`terraform/outputs.json`** (no secrets). After every `terraform apply`, generate and commit it:
+CI/CD reads **`terraform/terraform-output.json`** (no secrets). After every `terraform apply`, generate and commit it:
 
 ```powershell
 # From terraform/ directory (you are already there after apply)
-terraform output -json > outputs.json
-# Then from repo root: git add terraform/outputs.json && git commit -m "chore: update Terraform outputs for CI/CD"
+terraform output -json > terraform-output.json
+# Then from repo root: git add terraform/terraform-output.json && git commit -m "chore: update Terraform outputs for CI/CD"
 ```
 
-If this file is missing, the workflow will fail with a clear error. Do **not** add `terraform/outputs.json` to `.gitignore`.
+If this file is missing, the workflow will fail with a clear error. Do **not** add `terraform/terraform-output.json` to `.gitignore`.
 
 ---
 
@@ -165,4 +165,4 @@ terraform apply
 ```
 
 
-cd terraform && terraform output -json > outputs.json
+cd terraform && terraform output -json > terraform-output.json

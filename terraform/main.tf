@@ -129,7 +129,7 @@ resource "google_project_iam_member" "runtime_roles" {
 }
 
 ############################################
-# OUTPUTS (used by CI/CD via terraform/outputs.json)
+# OUTPUTS (used by CI/CD via terraform/terraform-output.json)
 ############################################
 
 output "project_id" {
