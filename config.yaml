@@ -12,7 +12,7 @@ environments:
 
 # =============================================================================
 # DEV — 2 to 4 users, engineers only, throwaway infra, fast iteration.
-# Everything is deletable. Short retention. Cheap. No safety nets by design.
+# Everything is deletable. Short retention. Cheap. No safety nets by design. .
 # =============================================================================
   dev:
 
