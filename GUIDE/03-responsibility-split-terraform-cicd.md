@@ -11,15 +11,15 @@
 
 ## Table of Contents
 
-1. [Introduction](1-introduction.md)
-2. [Why Terraform Instead of Python + GCP SDK](2-why-terraform-python-gcp-sdk.md)
-3. [Responsibility Split: Terraform vs CI/CD](3-responsibility-split-terraform-cicd.md)
-4. [Terraform Project Structure](4-terraform-project-structure.md)
-5. [Terraform Code Walkthrough](5-terraform-code-walkthrough.md)
-6. [Terraform Workflow](6-terraform-workflow.md)
-7. [CI/CD Integration](7-cicd-integration.md)
-8. [Maintenance & Scaling](8-maintenance-scaling.md)
-9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+1. [Introduction](01-introduction.md)
+2. [Why Terraform Instead of Python + GCP SDK](02-why-terraform-python-gcp-sdk.md)
+3. [Responsibility Split: Terraform vs CI/CD](03-responsibility-split-terraform-cicd.md)
+4. [Terraform Project Structure](04-terraform-project-structure.md)
+5. [Terraform Code Walkthrough](05-terraform-code-walkthrough.md)
+6. [Terraform Workflow](06-terraform-workflow.md)
+7. [CI/CD Integration](07-cicd-integration.md)
+8. [Maintenance & Scaling](08-maintenance-scaling.md)
+9. [Quick Reference Cheatsheet](09-quick-reference-cheatsheet.md)
 10. [End-to-End Flowchart (Terraform + CI/CD)](10-terraform-cicd-flowchart.md)
 
 ---
@@ -97,4 +97,4 @@ The handoff between Terraform and CI/CD happens through a **committed output fil
 
 ---
 
-[← Previous: Why Terraform Instead of Python + GCP SDK](2-why-terraform-python-gcp-sdk.md) · [Index](README.md) · [Next: Terraform Project Structure →](4-terraform-project-structure.md)
+[← Previous: Why Terraform Instead of Python + GCP SDK](02-why-terraform-python-gcp-sdk.md) · [Index](README.md) · [Next: Terraform Project Structure →](04-terraform-project-structure.md)
