@@ -56,8 +56,9 @@ Starting a new DataNeurus ML project with this template:
 │    terraform output -json > terraform-output.json               │
 │    git add terraform-output.json && git commit && git push      │
 │                                                                 │
-│  Step 5: Add GCP_SA_KEY to GitHub Secrets                       │
-│    (One secret, valid for the cicd service account)             │
+│  Step 5: Add `GCP_SA_KEY` (CI/CD service account key)           │
+│          to GitHub Secrets                                      │
+│    (One secret, valid for the CI/CD service account only)       │
 │                                                                 │
 │  Step 6: Push to dev branch → CI/CD runs automatically          │
 │                                                                 │
@@ -125,11 +126,11 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
 │   1. Update config.yaml on a feature branch                 │
 │                                                             │
 │   2. terraform plan -var="active_env=dev"                   │
-│      ◄── Review: does the plan look right?                 │
+│      ◄── Review: does the plan look right?                  │
 │          Will anything be destroyed unexpectedly?           │
 │                                                             │
 │   3. Open Pull Request                                      │
-│      ◄── Team reviews the plan output                      │
+│      ◄── Team reviews the plan output                       │
 │          Are the changes intentional?                       │
 │                                                             │
 │   4. terraform apply -var="active_env=dev"  (after review)  │
@@ -290,3 +291,11 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
 ---
 
 [← Previous: CI/CD Integration](7-cicd-integration.md) · [Index](README.md) · [Next: Quick Reference Cheatsheet →](9-quick-reference-cheatsheet.md)
+
+
+---
+
+
+
+---
+

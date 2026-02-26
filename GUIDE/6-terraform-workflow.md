@@ -37,11 +37,11 @@ The Terraform workflow follows four core commands. Here is a detailed walkthroug
 ┌─────────────────────────────────────────────────────────────────┐
 │                   TERRAFORM WORKFLOW                            │
 │                                                                 │
-│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌─────────┐  │
-│   │   INIT   │───►│   PLAN   │───►│  APPLY   │───►│OUTPUTS  │  │
-│   └──────────┘    └──────────┘    └──────────┘    └─────────┘  │
-│   Download        Preview          Create/Update  Export JSON  │
-│   providers       changes          resources      for CI/CD    │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌─────────┐   │
+│   │   INIT   │───►│   PLAN   │───►│  APPLY   │───►│OUTPUTS  │   │
+│   └──────────┘    └──────────┘    └──────────┘    └─────────┘   │
+│   Download        Preview          Create/Update  Export JSON   │
+│   providers       changes          resources      for CI/CD     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -183,7 +183,7 @@ Error: Error creating Bucket: googleapi: Error 409: ... already exists
 
 ```bash
 # Tell Terraform: "This existing GCP resource belongs to this Terraform resource"
-terraform import google_storage_bucket.data mlapp-dev-data-my-project-001
+terraform import google_storage_bucket.data <GCS_BUCKET_NAME>   # e.g. mlapp-dev-data-my-project-001
 terraform import google_bigquery_dataset.dataset projects/my-project-001/datasets/training_dataset_dev
 
 # Then apply as normal (Terraform will update to match config, not recreate)
@@ -194,13 +194,13 @@ After importing, Terraform "knows" about the existing resource and will manage i
 
 ---
 
-### 6.7 Golden path — full execution script (PowerShell)
+### 6.7 Full execution script (PowerShell)
 
 Use this end-to-end script on Windows when setting up a new project or recovering from auth issues. Set `$PROJECT_ID` to match `config.yaml` (e.g. `environments.dev.project_id`). Run from **repo root** (so `terraform/` and `config.yaml` are in place).
 
 ```powershell
 ############################################
-# GOLDEN PATH — FULL EXECUTION SCRIPT
+FULL EXECUTION SCRIPT
 ############################################
 
 $PROJECT_ID = "YOUR_PROJECT_ID_DEV"   # Must match config.yaml
@@ -209,7 +209,7 @@ echo $PROJECT_ID
 # STEP 1 — Environment & tools
 terraform -version
 gcloud version
-$env:GOOGLE_APPLICATION_CREDENTIALS = ""
+$env:GOOGLE_APPLICATION_CREDENTIALS = ""  # de-initialise
 
 # STEP 2 — Authentication & project setup
 gcloud auth application-default revoke

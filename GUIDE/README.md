@@ -1,6 +1,6 @@
 # Terraform Implementation Guide <img src="./logo.png" alt="DataNeurus logo" align="right" width="150" />
 
-## Terraform + CI/CD: Infrastructure as Code for ML/AI/Data Projects
+## Terraform + CI/CD for Complete ML Automation Across Environments
 
 > **Document Type:** Internal Engineering Reference  
 > **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
@@ -23,4 +23,5 @@
 
 ---
 
-Navigate to any section above to read that part of the guide. Each document is self-contained and includes navigation back to this index where relevant.
+Navigate to any section above to read that part of the guide. <br>
+Each document is self-contained and includes navigation back to this index where relevant.
