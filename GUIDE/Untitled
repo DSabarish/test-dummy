@@ -1,7 +1,2 @@
-When engineers first encounter cloud infrastructure, a natural question arises:
-
-> "I already know Python. Can't I just use `google-cloud-storage` and `google-cloud-bigquery` to create my buckets and datasets?"
-
-The short answer is: **yes, technically — but it leads to serious problems at scale.** Here's why.
-
----
+$PROJECT_ID = "sabs-dev5-100"
+echo $PROJECT_ID

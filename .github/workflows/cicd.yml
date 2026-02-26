@@ -10,6 +10,20 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: ML-code/requirements.txt
+
+      - run: pip install -r ML-code/requirements.txt
+      - run: python -m pytest tests/ -v
+
   pipeline:
     needs: [test]
     runs-on: ubuntu-latest
@@ -80,20 +94,6 @@ jobs:
           ARTIFACTS_BUCKET: ${{ env.ARTIFACTS_BUCKET }}
           DATASET_ID:       ${{ env.DATASET_ID }}
           TABLE_ID:         ${{ env.TABLE_ID }}
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
-          cache-dependency-path: ML-code/requirements.txt
-
-      - run: pip install -r ML-code/requirements.txt
-      - run: python -m pytest tests/ -v
 
   deploy:
     needs: [pipeline]
@@ -296,3 +296,5 @@ jobs:
             git checkout -b "$NEXT"
             git push -u origin "$NEXT"
           fi
+
+
