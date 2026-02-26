@@ -1,233 +1,216 @@
-# New project template — Setting up GCP ML infra
-
-Use this folder to **start a new project** from the same Terraform and config pattern. It contains only the code and a config template; no state or cache.
-
----
-
-## What’s in this folder
-
-```
-new-project-template/
-├── README.md           ← You are here (how to use)
-├── config.yaml         ← Edit this: set YOUR project IDs and env values
-├── .github/
-│   └── workflows/
-│       └── cicd.yml    ← Runs ML-code/run_pipeline.py (test + pipeline + deploy)
-├── ML-code/            ← Template scripts: print config vars to show they are callable
-│   ├── config_loader.py   Loads config.yaml (use cfg['project_id'] etc.)
-│   ├── run_pipeline.py    Print-only; replace with your real pipeline
-│   └── requirements.txt  pyyaml only (add pandas, sklearn, etc. when you add ML)
-└── terraform/
-    ├── config.tf       ← Reads config.yaml from parent folder
-    ├── main.tf         ← GCP resources (buckets, BigQuery, IAM, Artifact Registry)
-    └── config-generator/   ← Optional: export env file from config (no GCP)
-        └── main.tf
-```
-
-- **ML-code:** Template Python scripts with **commented variables** you can use (`project_id`, `data_bucket`, `dataset_id`, etc.). `run_pipeline.py` only **prints** those values from `config.yaml` (and from CI env when Terraform outputs are loaded) so you see they are properly callable. Replace with your real ML steps.
-- **.github/workflows/cicd.yml:** Runs `run_pipeline.py` in the **test** job (config check) and **pipeline** job (with Terraform outputs and GCP auth), then **deploy** (Cloud Run). You need `terraform-output.json` committed and **GCP_SA_KEY** in GitHub Secrets for pipeline/deploy to succeed.
-
-**Not included (on purpose):** `.terraform/`, `*.tfstate`, `terraform-output.json`. You will create these when you run Terraform in the new project.
-
----
-
-## How to use this template
-
-### New repo from this template
-
-1. **Copy this whole folder** into your new repo’s root (or create a new repo and copy the contents so that `config.yaml` and `terraform/` sit at the **root** of the repo).
-
-   Result should look like:
-   ```
-   your-new-repo/
-   ├── config.yaml      ← from this template (then edit)
-   ├── .github/workflows/cicd.yml
-   ├── ML-code/
-   │   ├── config_loader.py
-   │   ├── run_pipeline.py
-   │   └── requirements.txt
-   └── terraform/
-       ├── config.tf
-       ├── main.tf
-       └── config-generator/
-   ```
-
-2. **Edit `config.yaml`** (at repo root):
-   - Replace `YOUR_PROJECT_ID_DEV`, `YOUR_PROJECT_ID_QA`, `YOUR_PROJECT_ID_PROD` with your real GCP project IDs.
-   - Adjust `region`, `prefix`, `dataset_id`, `table_id` if needed.
-   - Keep the same structure (environments.dev / .qa / .prod).
-
-3. **Authenticate and enable APIs** (once per project):
-   ```bash
-   gcloud auth login
-
-   gcloud auth application-default login
-   
-   $PROJECT_ID="sabs-dev5-100"
-   echo $PROJECT_ID
-   
-   gcloud config set project $PROJECT_ID
-   
-   gcloud services enable artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com run.googleapis.com storage.googleapis.com --project $PROJECT_ID
-   
-   gcloud services enable run.googleapis.com artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com --project $PROJECT_ID
-   ```
-   Repeat for qa/prod if you use separate projects.
-
-4. **Run Terraform** (from repo root):
-   ```bash
-   cd terraform
-   terraform -version
-   terraform init
-         or
-   terraform init -reconfigure
-   terraform plan -var="active_env=dev"
-   terraform apply -var="active_env=dev"
-   > yes
-   ```
-   For qa/prod: run again with `-var="active_env=qa"` and `-var="active_env=prod"`.
-
-5. **Export outputs for CI/CD and ML**:
-   ```bash
-   terraform output -json > terraform-output.json
-   ```
-   Commit `terraform-output.json` (no secrets; CI/CD and pipelines read it).
-
-6. If you use **GitHub Actions**: add the new project’s CI/CD service account key as **GCP_SA_KEY** in GitHub Secrets. The workflow runs **test** (config check via `run_pipeline.py`), **pipeline** (same script with Terraform outputs), and **deploy** (Cloud Run). For deploy you also need a **Dockerfile** at repo root that builds your app image.
-
-7. **Local check:** From repo root, `pip install -r ML-code/requirements.txt` then `python ML-code/run_pipeline.py` to confirm config vars print correctly.
-
----
-
-## Terraform: cautions and good practices
-
-**Cautions when working with Terraform**
-
-- **State and backend:** Do **not** commit `*.tfstate` or `.terraform/`. They contain paths, IDs, and (in some setups) secrets. This template uses local state; for teams, use a remote backend (e.g. GCS bucket) and lock it.
-- **`active_env`:** Always pass `-var="active_env=dev"` (or qa/prod) on `plan` and `apply`. Wrong env = wrong project and possible production changes.
-- **Destructive options:** `bucket_force_destroy: true` and `dataset_delete_on_destroy: true` in config allow Terraform to delete data when you destroy. Use only in dev; keep them `false` in qa/prod.
-- **Plan before apply:** Run `terraform plan -var="active_env=..."` and review the diff before every `apply`. Avoid applying blindly in CI without reviewing.
-- **No manual drift:** Prefer changing infra via Terraform (edit `.tf` or `config.yaml`, then plan/apply). Manual changes in GCP console will be overwritten or cause drift.
-
-**Good practices to follow**
-
-- **One apply per env:** Run `terraform apply` separately for dev, qa, and prod with the correct `active_env`. Do not apply once and assume all envs are in sync.
-- **Commit `terraform-output.json`:** After the first apply (and after any change that affects outputs), run `terraform output -json > terraform-output.json` and commit it so CI/CD and ML code see current bucket names, project ID, etc.
-- **Pin provider versions:** Keep required provider versions in `config.tf` (or `versions.tf`) so everyone and CI use the same Terraform/provider versions.
-- **Small, reviewable changes:** Prefer small Terraform changes and review them like code. Use meaningful commit messages (e.g. "add qa bucket lifecycle rule").
-- **Backup state (if local):** If you use local state, back up the state file and `.terraform.lock.hcl` before big changes. Prefer a remote backend for anything shared or production.
-
----
-
-## Troubleshooting
-
-**`oauth2: cannot fetch token: 400 Bad Request` / `Invalid grant: account not found`**
-
-Terraform is using invalid or expired Google Cloud credentials. Re-authenticate with the account that has access to your GCP project:
-
-```bash
-gcloud auth login
-gcloud auth application-default login
-gcloud config set project YOUR_PROJECT_ID_DEV
-```
-
-Use the same Google account that is a member of the GCP project. If you changed your Google password or revoked app access, you must run these commands again. Then retry `terraform plan` and `terraform apply`.
-
----
-
-## Golden path — full execution script (PowerShell)
-
-Run this end-to-end on Windows (PowerShell) after editing `config.yaml` with your project ID. Replace `YOUR_PROJECT_ID_DEV` and `YOUR_EMAIL@gmail.com` with your values.
+# GCP ML Infrastructure Setup
 
 ```powershell
 ############################################
-# GOLDEN PATH — FULL EXECUTION SCRIPT
+#  GOLDEN PATH — FULL EXECUTION SCRIPT
+#
+# WHAT THIS DOES:
+#   Sets up GCP infrastructure (Cloud Run, BigQuery,
+#   Artifact Registry, IAM) for a new ML project
+#   using Terraform. Run top-to-bottom, once per env.
+#
+# PREREQUISITES:
+#   - Terraform installed  → https://developer.hashicorp.com/terraform/install
+#   - gcloud CLI installed → https://cloud.google.com/sdk/docs/install
+#   - A GCP project already created
 ############################################
 
-# -------------------------------
-# PROJECT VARIABLE (must match config.yaml environments.dev.project_id)
-# -------------------------------
-$PROJECT_ID = "YOUR_PROJECT_ID_DEV"
+
+# ══════════════════════════════════════════════════
+# 🔹 PROJECT VARIABLE
+#
+# Set your real GCP project ID here.
+# Every command below automatically uses this value.
+# Change it when switching to a different project.
+# ══════════════════════════════════════════════════
+$PROJECT_ID = "sabs-dev5-100"
 echo $PROJECT_ID
 
-# -------------------------------
-# STEP 1 — Environment & tools
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 1 — Verify Environment & Tools
+#
+# Confirms Terraform and gcloud are installed.
+# If either command errors, install the tool first
+# before continuing.
+# ══════════════════════════════════════════════════
 terraform -version
 gcloud version
 
-# Clear any manually set credentials path (use gcloud default)
-$env:GOOGLE_APPLICATION_CREDENTIALS = ""
+# WHY: A stale GOOGLE_APPLICATION_CREDENTIALS env var
+# can silently point to the wrong key file, causing
+# auth failures. Clear it so gcloud uses ADC instead.
+$env:GOOGLE_APPLICATION_CREDENTIALS=""
 
-# -------------------------------
-# STEP 2 — Authentication & project setup
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 2 — Authentication & Project Setup
+#
+# Fully resets auth state so credentials are tied
+# to THIS project only — not a previous session.
+# ══════════════════════════════════════════════════
+
+# 1. Revoke any existing Application Default Credentials.
+#    WHY: Old sessions from a different project can
+#    cause Terraform to deploy to the wrong project.
 gcloud auth application-default revoke
+
+# 2. Log in fresh (two commands needed):
+#    - auth login         → for gcloud CLI commands
+#    - application-default login → for Terraform & SDKs
 gcloud auth login
 gcloud auth application-default login
 
+# 3. Lock gcloud and ADC to the target project.
+#    WHY: Forces all API calls to bill and deploy
+#    to $PROJECT_ID, not your personal default project.
+echo $PROJECT_ID
 gcloud config set project $PROJECT_ID
 gcloud auth application-default set-quota-project $PROJECT_ID
 
-# Verification ("Big Three")
+# 4. THE "BIG THREE" — Verify everything is correct.
+#    Run these and confirm before continuing:
+#     auth list         → your email is ACTIVE
+#     get-value project → shows $PROJECT_ID
+#     cat credentials   → quota_project_id = $PROJECT_ID
 gcloud auth list
 gcloud config get-value project
 cat $env:APPDATA\gcloud\application_default_credentials.json
 
-# -------------------------------
-# STEP 3 — Enable required APIs
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 3 — Enable Required GCP APIs
+#
+# GCP resources can't be created until their APIs
+# are enabled. This is a one-time step per project.
+# Safe to re-run — enabling an already-enabled API
+# is a no-op.
+# ══════════════════════════════════════════════════
+
+# Enable individually (explicit, easy to debug):
 gcloud services enable artifactregistry.googleapis.com --project $PROJECT_ID
-gcloud services enable bigquery.googleapis.com         --project $PROJECT_ID
-gcloud services enable iam.googleapis.com             --project $PROJECT_ID
-gcloud services enable run.googleapis.com              --project $PROJECT_ID
-gcloud services enable storage.googleapis.com          --project $PROJECT_ID
+gcloud services enable bigquery.googleapis.com --project $PROJECT_ID
+gcloud services enable iam.googleapis.com --project $PROJECT_ID
 
-# Optional: grant your user "act as" the runtime SA (for local Cloud Run testing)
-# gcloud projects add-iam-policy-binding $PROJECT_ID `
-#   --member="user:YOUR_EMAIL@gmail.com" `
-#   --role="roles/iam.serviceAccountUser"
+# Enable all at once (final authoritative command):
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com --project $PROJECT_ID
 
-# Optional: let CICD SA act as runtime SA (needed for deploy)
-# Run after first terraform apply (replace with your project ID and SA names)
-# gcloud iam service-accounts add-iam-policy-binding `
-#   mlapp-dev-runtime@$PROJECT_ID.iam.gserviceaccount.com `
-#   --member="serviceAccount:mlapp-dev-cicd@$PROJECT_ID.iam.gserviceaccount.com" `
-#   --role="roles/iam.serviceAccountUser"
 
-# -------------------------------
-# STEP 4 — Prepare Terraform
-# -------------------------------
+# ══════════════════════════════════════════════════
+# 🔹 STEP 4 — Prepare Terraform
+#
+# Navigate into the terraform/ folder and wipe any
+# old state to prevent cross-project contamination.
+# ══════════════════════════════════════════════════
 cd terraform
 
-# Wipe old state only if switching project (prevents cross-project issues)
-# rm terraform.tfstate -ErrorAction SilentlyContinue
-# rm terraform.tfstate.backup -ErrorAction SilentlyContinue
+# WHY remove state files: If you previously ran
+# Terraform against a different project, stale state
+# will confuse Terraform about what already exists.
+# -ErrorAction SilentlyContinue = silently skip if
+# the file doesn't exist yet.
+rm terraform.tfstate        -ErrorAction SilentlyContinue
+rm terraform.tfstate.backup -ErrorAction SilentlyContinue
 
+# Download providers and set up the backend.
+# -reconfigure forces a clean init, ignoring any
+# cached backend config from a previous project.
 terraform init -reconfigure
 
-# -------------------------------
-# STEP 5 — Plan
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 5 — Plan (Dry Run — No Changes Made)
+#
+# Shows exactly what Terraform WILL create/change
+# before touching anything real.
+# VERIFY:
+#    Every resource shows project = $PROJECT_ID
+#    Plan summary counts look right (no surprises)
+# ══════════════════════════════════════════════════
 terraform plan -var="active_env=dev"
-# Verify: all resources show project = "$PROJECT_ID"
 
-# -------------------------------
-# STEP 6 — Apply
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 6 — Apply (Creates Real GCP Resources)
+#
+# Executes the plan. Type 'yes' when prompted.
+#
+# To deploy other environments, re-run with:
+#   terraform apply -var="active_env=qa"
+#   terraform apply -var="active_env=prod"
+# ══════════════════════════════════════════════════
 terraform apply -var="active_env=dev"
-# Type 'yes' when prompted
 
-# -------------------------------
-# STEP 7 — Export outputs for CI/CD and ML
-# -------------------------------
+
+# ══════════════════════════════════════════════════
+# 🔹 STEP 7 — Export Terraform Outputs
+#
+# Saves resource names (bucket names, dataset IDs,
+# Cloud Run URLs, etc.) to a JSON file.
+# WHY: CI/CD pipelines and run_pipeline.py read this
+# file to know WHERE to connect. No secrets are
+# included — safe to commit to Git.
+# ══════════════════════════════════════════════════
 terraform output -json > terraform-output.json
-cd ..
-# Commit terraform-output.json
+
+# Commit terraform-output.json to your repo so
+# GitHub Actions can use it in pipeline/deploy jobs.
+
 
 ############################################
-# DONE — Infra deployed to $PROJECT_ID
+# 🔹 DONE — INFRA DEPLOYED TO $PROJECT_ID
 ############################################
+
+
+# ══════════════════════════════════════════════════
+# 🔹 POST-SETUP CHECKLIST
+# ══════════════════════════════════════════════════
+
+# ── GitHub Actions Setup ──────────────────────────
+# Add your CI/CD service account key to GitHub:
+#   Repo → Settings → Secrets → New secret
+#   Name: GCP_SA_KEY  |  Value: <contents of key JSON>
+#
+# The workflow runs 3 jobs automatically on push:
+#   test     → python ML-code/run_pipeline.py (config check)
+#   pipeline → same script but with Terraform outputs + GCP auth
+#   deploy   → builds & pushes Docker image to Cloud Run
+#
+# ⚠️  deploy job also requires a Dockerfile at repo root.
+
+# ── Local Smoke Test ─────────────────────────────
+# Run from the repo ROOT (not terraform/) to confirm
+# config.yaml loads and all vars print correctly:
+pip install -r ML-code/requirements.txt
+python ML-code/run_pipeline.py
+
+
+# ══════════════════════════════════════════════════
+# 🔹 TERRAFORM CAUTIONS & GOOD HABITS
+# ══════════════════════════════════════════════════
+
+# ⚠️  CAUTIONS — things that cause real damage if ignored:
+#
+#   ✗ Never commit *.tfstate or .terraform/ to Git
+#     → State files can contain secrets; use a remote backend
+#   ✗ Always pass -var="active_env=dev|qa|prod" on plan & apply
+#     → Without it, Terraform uses the wrong env defaults
+#   ✗ Never manually change infra in the GCP Console
+#     → Terraform won't know, causing drift and broken applies
+#   ✗ Read the plan output before every apply
+#     → A "destroy" line in the plan means data loss
+#   ✗ Be extremely careful with destroy in qa/prod
+#     → Only use destroy freely in dev
+
+#  GOOD HABITS — do these every time:
+#
+#   ✓ Run once per env: dev → qa → prod (never skip envs)
+#   ✓ After every apply: terraform output -json > terraform-output.json
+#     then commit the file so CI/CD stays in sync
+#   ✓ Pin Terraform and provider versions in config.tf
+#     so all teammates use identical tooling
+#   ✓ Make small, reviewable changes — one resource at a time
+#   ✓ Use a dedicated GCS bucket as a remote backend to store
+#     all tfstate files (one per env/project), and always
+#     check that state before applying changes
 ```
-
-**Expected outputs (example):** `artifact_repo_url`, `artifacts_bucket`, `cicd_service_account`, `data_bucket`, `dataset_id`, `project_id`, `region`, `runtime_service_account`, `table_id`.
