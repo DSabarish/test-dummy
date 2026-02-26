@@ -123,8 +123,8 @@ flowchart TD
  classDef success fill:#003d1a,stroke:#27ae60,color:#e6fff0,font-weight:bold
  classDef neutral fill:#1a1a2e,stroke:#6c7a89,color:#dce3ea
 
- style TERRAFORM_STAGE fill:#1a0f2e,stroke:#9b59b6,stroke-width:3px,color:#d8c8ff
- style CICD_STAGE fill:#0a1f12,stroke:#2ecc71,stroke-width:3px,color:#c8ffd8
+ style TERRAFORM_STAGE fill:#f0ebff,stroke:#5b2d8e,stroke-width:4px,color:#1a0a2e
+ style CICD_STAGE fill:#ebfff2,stroke:#1a7a3c,stroke-width:4px,color:#0a1f12
 
  class CONFIG config
  class PLAN,APPLY,OUTPUT,FIX terraform
