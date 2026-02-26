@@ -4,8 +4,8 @@
 
 > **Document Type:** Internal Engineering Reference  
 > **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
-> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
-> **Last Updated:** 2025
+> **Status:** 🟡 Active Template — Under Review  
+> **Last Updated:** 26-02-2026
 
 ---
 
@@ -47,23 +47,23 @@ This is achieved through the **Pull Request → Plan, Merge → Apply** pattern.
 │                                                                      │
 │  Trigger: push to dev / qa / prod                                    │
 │                                                                      │
-│  ┌─────────┐    ┌──────────────┐    ┌────────────────┐              │
-│  │  test   │───►│   pipeline   │───►│    deploy      │              │
-│  │         │    │              │    │                │              │
-│  │ pytest  │    │ Load outputs │    │ Load outputs   │              │
-│  │         │    │ Auth to GCP  │    │ Auth to GCP    │              │
-│  └─────────┘    │ Run ML code  │    │ Build Docker   │              │
-│                 └──────────────┘    │ Push to AR     │              │
-│                                     │ gcloud run     │              │
-│                                     │ deploy         │              │
-│                                     └────────────────┘              │
-│                                              │                      │
-│                                              ▼                      │
-│                                     ┌────────────────┐              │
-│                                     │   push-code    │              │
-│                                     │ (dev → qa →    │              │
-│                                     │  prod chain)   │              │
-│                                     └────────────────┘              │
+│  ┌─────────┐    ┌──────────────┐    ┌────────────────┐               │
+│  │  test   │───►│   pipeline   │───►│    deploy      │               │
+│  │         │    │              │    │                │               │
+│  │ pytest  │    │ Load outputs │    │ Load outputs   │               │
+│  │         │    │ Auth to GCP  │    │ Auth to GCP    │               │
+│  └─────────┘    │ Run ML code  │    │ Build Docker   │               │
+│                 └──────────────┘    │ Push to AR     │               │
+│                                     │ gcloud run     │               │
+│                                     │ deploy         │               │
+│                                     └────────────────┘               │
+│                                              │                       │
+│                                              ▼                       │
+│                                     ┌────────────────┐               │
+│                                     │   push-code    │               │
+│                                     │ (dev → qa →    │               │
+│                                     │  prod chain)   │               │
+│                                     └────────────────┘               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -225,9 +225,9 @@ Branch: prod  →  ACTIVE_ENV=prod  →  Uses environments.prod in config.yaml
 
 ```
 dev ──► qa ──► prod
-         ↑         ↑
+        ↑         ↑
     push_to_next  push_to_next
-    _branch=true  _branch=false
+   _branch=true  _branch=false
 ```
 
 After a successful deploy to `dev`, CI/CD automatically merges code to `qa`. After `qa` succeeds, code is promoted to `prod`. This is the **GitOps promotion pattern**.

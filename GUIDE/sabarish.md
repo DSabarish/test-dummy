@@ -4,8 +4,8 @@
 
 > **Document Type:** Internal Engineering Reference  
 > **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
-> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
-> **Last Updated:** 2025
+> **Status:** 🟡 Active Template — Under Review  
+> **Last Updated:** 26-02-2026
 
 ---
 

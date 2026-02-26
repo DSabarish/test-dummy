@@ -4,8 +4,8 @@
 
 > **Document Type:** Internal Engineering Reference  
 > **Audience:** Engineers new to Infrastructure as Code (beginner → intermediate)  
-> **Status:** 🟢 Active Template — Reusable across all DataNeurus projects  
-> **Last Updated:** 2025
+> **Status:** 🟡 Active Template — Under Review  
+> **Last Updated:** 26-02-2026
 
 ---
 
@@ -77,7 +77,7 @@ Both options lead to drift between environments, duplication, and confusion.
 
 ---
 
-### 4.2 The DataNeurus Improved Approach: Single Config File
+### 4.2 Proposed Approach: Single Config File
 
 We solve this with a **single `config.yaml` at the repo root** that holds all three environments:
 
