@@ -1,4 +1,4 @@
-# GCP ML Infrastructure Setup
+# GCP ML Infrastructure Setup <img src=".\logo.png" alt="DataNeurus logo" align="right" width="150" />
 
 ```powershell
 ############################################
