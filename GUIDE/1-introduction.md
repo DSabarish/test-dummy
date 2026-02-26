@@ -130,8 +130,7 @@ This takes days. With Terraform, it takes minutes.
 Terraform fills the gap that CI/CD leaves open: **infrastructure management**.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    DataNeurus Platform                       │
+
 ├─────────────────────────────┬───────────────────────────────┤
 │         TERRAFORM           │           CI/CD               │
 │   "Build the foundation"    │   "Deploy what runs on it"    │
