@@ -21,3 +21,4 @@ venv/
 .env
 .idea/
 .vscode/
+.vincent/
