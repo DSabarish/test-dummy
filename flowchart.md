@@ -47,7 +47,7 @@ flowchart TD
  TF_DONE --> GIT_COMMIT
  CODE_BRANCH --> GIT_COMMIT
 
- GIT_COMMIT["< git add .  >  < git commit >  < git push >
+ GIT_COMMIT["< git add .; git commit; git push origin dev>
  
  Both terraform-output.json AND ML code
  are committed together in one push.
