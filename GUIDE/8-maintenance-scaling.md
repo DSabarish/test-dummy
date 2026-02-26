@@ -21,6 +21,7 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+10. [End-to-End Flowchart (Terraform + CI/CD)](10-terraform-cicd-flowchart.md)
 
 ---
 
@@ -172,12 +173,12 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
                     └────────┬───────────┘      Compute diff
                              │
                     ┌────────┴───────────┐
-                    │  Review plan output │
+                    │ Review plan output │
                     └────────┬───────────┘
                              │
               ┌──────────────┴──────────────┐
-              │ Looks good?                  │ Unexpected changes?
-              ▼                              ▼
+              │ Looks good?                 │ Unexpected changes?
+              ▼                             ▼
    ┌──────────────────┐            ┌──────────────────┐
    │ terraform apply  │            │ Fix config.yaml  │
    │ -var="active_env │            │ then re-plan     │
@@ -213,7 +214,7 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
                              ▼
               ┌──────────────────────────┐
               │       JOB: test          │
-              │  pytest tests/           │
+              │      pytest tests/*.py   │
               └──────────┬───────────────┘
                          │  Pass?
               ┌──────────┴───────────────┐
@@ -255,27 +256,27 @@ Changing infrastructure (e.g., updating a BigQuery schema or adding a lifecycle 
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                    config.yaml                              │    │
-│  │              (Single source of truth)                        │    │
+│  │              (Single source of truth)                       │    │
 │  └──────────────────┬───────────────────────┬──────────────────┘    │
 │                     │                       │                       │
 │                     ▼                       ▼                       │
 │         ┌────────────────────┐   ┌──────────────────────────┐       │
-│         │     TERRAFORM      │   │       ML CODE             │       │
-│         │                    │   │  (config_loader.py)       │       │
-│         │  Creates infra:    │   │                           │       │
-│         │  - GCS buckets     │   │  Uses ACTIVE_ENV to       │       │
-│         │  - BigQuery        │   │  load the right env        │       │
-│         │  - Artifact Reg.   │   │  block from config.yaml   │       │
+│         │     TERRAFORM      │   │       ML CODE            │       │
+│         │                    │   │  (config_loader.py)      │       │
+│         │  Creates infra:    │   │                          │       │
+│         │  - GCS buckets     │   │  Uses ACTIVE_ENV to      │       │
+│         │  - BigQuery        │   │  load the right env      │       │
+│         │  - Artifact Reg.   │   │  block from config.yaml  │       │
 │         │  - Service Accts   │   └──────────────────────────┘       │
 │         └──────────┬─────────┘                                      │
-│                    │ terraform output -json                          │
-│                    ▼                                                 │
+│                    │ terraform output -json                         │
+│                    ▼                                                │
 │         ┌────────────────────┐                                      │
 │         │ terraform-output   │◄── Committed to Git repo             │
-│         │     .json          │    No secrets inside                  │
+│         │     .json          │    No secrets inside                 │
 │         └──────────┬─────────┘                                      │
 │                    │ CI/CD reads this file                          │
-│                    ▼                                                 │
+│                    ▼                                                │
 │         ┌────────────────────┐                                      │
 │         │   GITHUB ACTIONS   │◄── Only secret: GCP_SA_KEY           │
 │         │                    │                                      │

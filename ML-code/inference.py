@@ -76,7 +76,7 @@ def predict(req: PredictRequest):
 
 
 # Serve frontend from same app (for single Cloud Run service)
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 
 
 @app.get("/")
@@ -85,7 +85,7 @@ def serve_frontend():
     if os.path.isfile(index_path):
         from fastapi.responses import FileResponse
         return FileResponse(index_path)
-    return {"message": "Set FRONTEND_DIR or deploy with frontend/index.html"}
+    return {"message": "Set FRONTEND_DIR or deploy with ML-code/frontend/index.html"}
 
 
 if __name__ == "__main__":

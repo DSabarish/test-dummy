@@ -61,10 +61,10 @@ This keeps **all environments aligned** and avoids drift because there is exactl
 ├── ML-code/                  # Pipeline + inference (reads config.yaml)
 │   ├── config_loader.py      # Loads config.yaml; derives feature_columns, buckets, SAs
 │   ├── run_pipeline.py       # Full pipeline entrypoint
-│   ├── inference.py          # FastAPI + /predict
+│   ├── inference.py          # FastAPI + /predict (+ serves ./frontend UI)
+│   ├── frontend/             # Static frontend served at "/" by inference.py
 │   └── requirements.txt
 ├── tests/
-├── frontend/
 ├── .github/
 │   └── workflows/
 │       └── cicd.yml

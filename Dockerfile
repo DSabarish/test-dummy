@@ -8,7 +8,6 @@ COPY ML-code/requirements.txt ML-code/
 RUN pip install --no-cache-dir -r ML-code/requirements.txt
 
 COPY ML-code/ ML-code/
-COPY frontend/ frontend/
 COPY config.yaml .
 
 ENV PORT=8080

@@ -20,6 +20,7 @@
 7. [CI/CD Integration](7-cicd-integration.md)
 8. [Maintenance & Scaling](8-maintenance-scaling.md)
 9. [Quick Reference Cheatsheet](9-quick-reference-cheatsheet.md)
+10. [End-to-End Flowchart (Terraform + CI/CD)](10-terraform-cicd-flowchart.md)
 
 ---
 
@@ -149,4 +150,4 @@ For questions about this template, open an issue in the `dataneurus/ml-template`
 
 ---
 
-[← Previous: Maintenance & Scaling](8-maintenance-scaling.md) · [Index](README.md)
+[← Previous: Maintenance & Scaling](8-maintenance-scaling.md) · [Index](README.md) · [Next: End-to-End Flowchart (Terraform + CI/CD) →](10-terraform-cicd-flowchart.md)
