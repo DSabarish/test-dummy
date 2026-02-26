@@ -1,4 +1,4 @@
-# ML App on GCP ? Infra + Pipeline + Deploy
+# ML App on GCP — Infra + Pipeline + Deploy
 
 A single repo that provisions **GCP infrastructure** (Terraform), runs an **ML training pipeline** (Python), and **deploys an inference API** (Cloud Run). **One file configures everything:** root **`config.yaml`** is the only place you edit for both Terraform and ML.
 
@@ -8,8 +8,8 @@ A single repo that provisions **GCP infrastructure** (Terraform), runs an **ML t
 
 **`config.yaml`** at the repo root holds **one file, all environments** (dev, qa, prod):
 
-- **`active_env`** ? which block is used (e.g. `"dev"`). Override at run time so the file stays untouched.
-- **`environments.dev` / `environments.qa` / `environments.prod`** ? each block is a full config (project_id, region, buckets, BigQuery, schema, ML paths, etc.). Diff between envs is visible side-by-side.
+- **`active_env`** — which block is used (e.g. `"dev"`). Override at run time so the file stays untouched.
+- **`environments.dev` / `environments.qa` / `environments.prod`** — each block is a full config (project_id, region, buckets, BigQuery, schema, ML paths, etc.). Diff between envs is visible side-by-side.
 
 | Consumer | How it selects and uses config |
 |----------|--------------------------------|
@@ -19,10 +19,10 @@ A single repo that provisions **GCP infrastructure** (Terraform), runs an **ML t
 
 **Execution logic:**
 
-1. **Edit only `config.yaml`** ? add or change keys inside `environments.dev` / `.qa` / `.prod`. Optionally set `active_env` for local defaults.
-2. **Terraform** ? `terraform apply` (or `apply -var="active_env=qa"` for qa). No file modification; env is explicit.
-3. **ML pipeline** ? Locally uses `active_env` in file; in CI uses `ACTIVE_ENV` from branch.
-4. **CI/CD** ? Branch name = env. Each branch should have its own `terraform-output.json` (from apply for that env).
+1. **Edit only `config.yaml`** — add or change keys inside `environments.dev` / `.qa` / `.prod`. Optionally set `active_env` for local defaults.
+2. **Terraform** — `terraform apply` (or `apply -var="active_env=qa"` for qa). No file modification; env is explicit.
+3. **ML pipeline** — Locally uses `active_env` in file; in CI uses `ACTIVE_ENV` from branch.
+4. **CI/CD** — Branch name = env. Each branch should have its own `terraform-output.json` (from apply for that env).
 
 Single source of truth; no drift between envs because all three are in one file.
 
@@ -33,9 +33,9 @@ Single source of truth; no drift between envs because all three are in one file.
 | Part | Purpose |
 |------|--------|
 | **Terraform** | Creates Artifact Registry, BigQuery (dataset + table), two GCS buckets (data + artifacts), and two service accounts (CI/CD + runtime) with IAM. All inputs from `config.yaml`. **Terraform does not create or manage Cloud Run.** |
-| **ML pipeline** | Generate data ? write to BigQuery ? export to GCS ? clean ? transform ? train ? save model to GCS (versioned). Uses `config.yaml` via `config_loader.py`. |
+| **ML pipeline** | Generate data → write to BigQuery → export to GCS → clean → transform → train → save model to GCS (versioned). Uses `config.yaml` via `config_loader.py`. |
 | **Inference API** | FastAPI app that loads the latest model from GCS and exposes `/predict`. Packaged in Docker (includes `config.yaml`), deployed to Cloud Run. |
-| **CI/CD** | GitHub Actions: test ? pipeline (using `terraform/terraform-output.json`) ? build image ? deploy to Cloud Run. Only `GCP_SA_KEY` is a GitHub secret. **Cloud Run is created/updated exclusively via `gcloud run deploy` in CI/CD; Terraform never touches Cloud Run.** |
+| **CI/CD** | GitHub Actions: test → pipeline (using `terraform/terraform-output.json`) → build image → deploy to Cloud Run. Only `GCP_SA_KEY` is a GitHub secret. **Cloud Run is created/updated exclusively via `gcloud run deploy` in CI/CD; Terraform never touches Cloud Run.** |
 
 ---
 
@@ -43,25 +43,24 @@ Single source of truth; no drift between envs because all three are in one file.
 
 ```
 .
-??? config.yaml              # Central config. Edit only this for Terraform + ML.
-??? command_mark.md          # Step-by-step: auth, APIs, terraform, terraform-output.json
-?
-??? terraform/                # GCP infra (reads config.yaml)
-?   ??? config.tf             # Loads config.yaml ? local.config
-?   ??? main.tf                # Resources + outputs
-?   ??? terraform-output.json  # Committed after apply; CI/CD reads this
-?   ??? config-generator/      # Optional: env export from config (no GCP)
-?
-??? ML-code/                  # Pipeline + inference (read config.yaml)
-?   ??? config_loader.py      # Loads config.yaml; derives feature_columns, buckets, SAs
-?   ??? run_pipeline.py       # Full pipeline
-?   ??? inference.py          # FastAPI + /predict
-?   ??? requirements.txt
-?
-??? tests/
-??? frontend/
-??? .github/workflows/cicd.yml
-??? Dockerfile                # Cloud Run image (copies config.yaml)
+├── config.yaml              # Central config. Edit only this for Terraform + ML.
+├── command_mark.md          # Step-by-step: auth, APIs, terraform, terraform-output.json
+├── terraform/               # GCP infra (reads config.yaml)
+│   ├── config.tf            # Loads config.yaml → local.config
+│   ├── main.tf              # Resources + outputs
+│   ├── terraform-output.json # Committed after apply; CI/CD reads this
+│   └── config-generator/   # Optional: env export from config (no GCP)
+├── ML-code/                 # Pipeline + inference (read config.yaml)
+│   ├── config_loader.py     # Loads config.yaml; derives feature_columns, buckets, SAs
+│   ├── run_pipeline.py     # Full pipeline
+│   ├── inference.py        # FastAPI + /predict
+│   └── requirements.txt
+├── tests/
+├── frontend/
+├── .github/
+│   └── workflows/
+│       └── cicd.yml
+└── Dockerfile               # Cloud Run image (copies config.yaml)
 ```
 
 ---
@@ -72,8 +71,8 @@ Single source of truth; no drift between envs because all three are in one file.
 
 Edit **`config.yaml`** at repo root. Structure:
 
-- **`active_env`** ? default env for local runs (`"dev"` | `"qa"` | `"prod"`). CI overrides via branch; do not edit manually for prod.
-- **`environments.dev` / `.qa` / `.prod`** ? each block has **five sections**: (1) Project & env (2) Terraform only (labels, retention, IAM) (3) Shared (BQ dataset/table/schema) (4) ML only (GCS paths) (5) **CI/CD** (`push_to_next_branch`, `next_branch_name`). IAM (`cicd_roles`, `runtime_roles`) is explicit per env; prod uses tightened roles (e.g. `storage.objectAdmin`, `artifactregistry.writer`). **Promotion chain:** dev ? qa ? prod; prod has `push_to_next_branch: false` (end of chain).
+- **`active_env`** — default env for local runs (`"dev"` | `"qa"` | `"prod"`). CI overrides via branch; do not edit manually for prod.
+- **`environments.dev` / `.qa` / `.prod`** — each block has **five sections**: (1) Project & env (2) Terraform only (labels, retention, IAM) (3) Shared (BQ dataset/table/schema) (4) ML only (GCS paths) (5) **CI/CD** (`push_to_next_branch`, `next_branch_name`). IAM (`cicd_roles`, `runtime_roles`) is explicit per env; prod uses tightened roles (e.g. `storage.objectAdmin`, `artifactregistry.writer`). **Promotion chain:** dev → qa → prod; prod has `push_to_next_branch: false` (end of chain).
 
 **Selecting env:** Terraform: `terraform apply -var="active_env=qa"`. ML locally: uses `active_env` in file. CI: sets `ACTIVE_ENV` from branch name (dev/qa/prod).
 
@@ -120,10 +119,10 @@ Uses latest model from GCS; config from **config.yaml**.
 
 Workflow runs on push to **dev**, **qa**, or **prod**. Branch name = environment:
 
-1. **Set ACTIVE_ENV** from branch (e.g. `dev` ? `ACTIVE_ENV=dev`).
-2. **test** ? `pytest tests/`
-3. **pipeline** ? loads `terraform/terraform-output.json` ? env vars; runs `run_pipeline.py` with `ACTIVE_ENV` so config uses the right env block.
-4. **deploy** ? same outputs ? build image (with `config.yaml` in image) ? deploy to Cloud Run for that env using `gcloud run deploy`.
+1. **Set ACTIVE_ENV** from branch (e.g. `dev` → `ACTIVE_ENV=dev`).
+2. **test** → `pytest tests/`
+3. **pipeline** → loads `terraform/terraform-output.json` → env vars; runs `run_pipeline.py` with `ACTIVE_ENV` so config uses the right env block.
+4. **deploy** → same outputs → build image (with `config.yaml` in image) → deploy to Cloud Run for that env using `gcloud run deploy`.
 
 **Cloud Run ownership and config:**
 
@@ -133,10 +132,10 @@ Workflow runs on push to **dev**, **qa**, or **prod**. Branch name = environment
   - **Does not create or update Cloud Run services.**
 - **App (CI/CD):**
   - `deploy` job is the **only place** that creates/updates the Cloud Run service via `gcloud run deploy`.
-  - Flags such as **`--min-instances`**, **`--max-instances`**, **`--cpu`**, **`--memory`**, **`--timeout`**, and **`--concurrency`** are wired from `config.yaml` under each env?s `cloud_run` block (dev/qa/prod can be tuned independently for usage and traffic).
+  - Flags such as **`--min-instances`**, **`--max-instances`**, **`--cpu`**, **`--memory`**, **`--timeout`**, and **`--concurrency`** are wired from `config.yaml` under each env's `cloud_run` block (dev/qa/prod can be tuned independently for usage and traffic).
   - This keeps **infrastructure** (Terraform) and **application runtime** (Cloud Run) concerns clearly separated, while still using `config.yaml` as the single source of truth for per-environment sizing.
 
-**Secrets:** Only **GCP_SA_KEY**. Each branch should have its own **`terraform-output.json`** (from `terraform apply -var="active_env=<branch>"`). **Push-code:** After deploy, the workflow reads **per-env** `push_to_next_branch` and `next_branch_name` from `config.yaml` (dev?qa, qa?prod; prod has `push_to_next_branch: false`). If `next_branch_name` is empty or env is missing in config, push is skipped.
+**Secrets:** Only **GCP_SA_KEY**. Each branch should have its own **`terraform-output.json`** (from `terraform apply -var="active_env=<branch>"`). **Push-code:** After deploy, the workflow reads **per-env** `push_to_next_branch` and `next_branch_name` from `config.yaml` (dev→qa, qa→prod; prod has `push_to_next_branch: false`). If `next_branch_name` is empty or env is missing in config, push is skipped.
 
 ---
 
@@ -148,16 +147,16 @@ Workflow runs on push to **dev**, **qa**, or **prod**. Branch name = environment
 
 ```
 config.yaml (active_env + environments.dev|qa|prod)
-       ?
-       ??? Terraform (config.tf)
-       ?   active_env from -var or file ? environments[active_env] ? local.config.*
-       ?
-       ??? ML (config_loader.py)
-           ACTIVE_ENV env var or active_env in file ? environments[ACTIVE_ENV]
-           ? feature_columns, data_bucket, artifacts_bucket, SAs, artifact_repo_url
+       │
+       ├── Terraform (config.tf)
+       │   active_env from -var or file → environments[active_env] → local.config.*
+       │
+       └── ML (config_loader.py)
+           ACTIVE_ENV env var or active_env in file → environments[ACTIVE_ENV]
+           → feature_columns, data_bucket, artifacts_bucket, SAs, artifact_repo_url
 ```
 
-- **Terraform:** `config.tf` uses variable **`active_env`** (default from file). `local.config` is built from **`environments[active_env]`**. Override with **`terraform apply -var="active_env=qa"`** ? no file edit.
+- **Terraform:** `config.tf` uses variable **`active_env`** (default from file). `local.config` is built from **`environments[active_env]`**. Override with **`terraform apply -var="active_env=qa"`** — no file edit.
 - **ML:** **`config_loader.load_config()`** uses **`ACTIVE_ENV`** (CI) or **`active_env`** in file, then loads **`environments[active_env]`** and adds computed keys.
 - **CI:** Workflow sets **`ACTIVE_ENV=${{ github.ref_name }}`** (dev/qa/prod) so the right block is used.
 
@@ -184,7 +183,7 @@ CI/CD reads **`terraform/terraform-output.json`**. Generate it with `terraform o
 
 ## Requirements
 
-- **Terraform** ? 1.5
+- **Terraform** ≥ 1.5
 - **Google Cloud** project with billing; gcloud CLI and Application Default Credentials
 - **Python** 3.11 (see `ML-code/requirements.txt`)
 - **Docker** for building the Cloud Run image (CI/CD or local)
