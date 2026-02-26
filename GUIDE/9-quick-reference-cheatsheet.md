@@ -68,6 +68,18 @@ terraform output -json > terraform-output.json
 # Destroy (CAREFUL)
 terraform destroy -var="active_env=dev"
 
+# ── GOLDEN PATH — FULL EXECUTION (PowerShell, Windows) ────────────────
+# Run from repo root. Set $PROJECT_ID to match config.yaml (e.g. environments.dev.project_id).
+# See also: [6. Terraform Workflow](6-terraform-workflow.md#67-golden-path--full-execution-script-powershell)
+
+$PROJECT_ID = "YOUR_PROJECT_ID_DEV"
+$env:GOOGLE_APPLICATION_CREDENTIALS = ""
+gcloud auth application-default revoke; gcloud auth login; gcloud auth application-default login
+gcloud config set project $PROJECT_ID; gcloud auth application-default set-quota-project $PROJECT_ID
+gcloud services enable artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com run.googleapis.com storage.googleapis.com --project $PROJECT_ID
+cd terraform; terraform init -reconfigure; terraform plan -var="active_env=dev"; terraform apply -var="active_env=dev"
+terraform output -json > terraform-output.json; cd ..
+
 # ── IMPORT EXISTING RESOURCES ────────────────────────────────────────
 terraform import google_storage_bucket.data            BUCKET_NAME
 terraform import google_bigquery_dataset.dataset       projects/PROJECT_ID/datasets/DATASET_ID

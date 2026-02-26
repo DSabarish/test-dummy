@@ -17,7 +17,7 @@ environments:
   dev:
 
     # --- SECTION 1: Project & environment ---
-    project_id: "sabs-dev5-100"
+    project_id: "sabs-dev4-100"
     region: "asia-south1"
     environment: "dev"
     prefix: "mlapp"
@@ -120,7 +120,7 @@ environments:
   qa:
 
     # --- SECTION 1: Project & environment ---
-    project_id: "sabs-qa5-100"
+    project_id: "sabs-qa4-100"
     region: "asia-south1"
     environment: "qa"
     prefix: "mlapp"
@@ -225,7 +225,7 @@ environments:
   prod:
 
     # --- SECTION 1: Project & environment ---
-    project_id: "sabs-prod5-100"
+    project_id: "sabs-prod4-100"
     region: "asia-south1"
     environment: "prod"
     prefix: "mlapp"

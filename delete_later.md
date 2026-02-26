@@ -134,6 +134,7 @@ All of the above are driven from a **single master `config.yaml`** using:
     - `feature_columns` from `table_schema` minus `target_column`.
     - Buckets, repo URL, service account emails.
   - All ML modules (`generate_data.py`, `clean.py`, `train.py`, `inference.py`, etc.) import `load_config()`; they never read env-specific infra from secrets.
+  
 
 - **Dockerfile**:
   - Copies `ML-code/` and `frontend/`, and `config.yaml` into the image.

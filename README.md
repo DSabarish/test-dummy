@@ -101,6 +101,8 @@ terraform apply -var="active_env=dev"   # type yes
 terraform output -json > terraform-output.json
 ```
 
+**Golden path (PowerShell, full script):** For a single copy-paste flow (auth, APIs, init, plan, apply, outputs), see **[new-project-template/README.md](new-project-template/README.md#golden-path--full-execution-script-powershell)** or **[GUIDE §6.7](GUIDE/6-terraform-workflow.md#67-golden-path--full-execution-script-powershell)**.
+
 **command_mark.md** has the full sequence (APIs, IAM, 409 handling).
 
 ### 3. Run ML pipeline locally

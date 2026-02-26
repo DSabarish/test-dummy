@@ -194,4 +194,62 @@ After importing, Terraform "knows" about the existing resource and will manage i
 
 ---
 
+### 6.7 Golden path — full execution script (PowerShell)
+
+Use this end-to-end script on Windows when setting up a new project or recovering from auth issues. Set `$PROJECT_ID` to match `config.yaml` (e.g. `environments.dev.project_id`). Run from **repo root** (so `terraform/` and `config.yaml` are in place).
+
+```powershell
+############################################
+# GOLDEN PATH — FULL EXECUTION SCRIPT
+############################################
+
+$PROJECT_ID = "YOUR_PROJECT_ID_DEV"   # Must match config.yaml
+echo $PROJECT_ID
+
+# STEP 1 — Environment & tools
+terraform -version
+gcloud version
+$env:GOOGLE_APPLICATION_CREDENTIALS = ""
+
+# STEP 2 — Authentication & project setup
+gcloud auth application-default revoke
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project $PROJECT_ID
+gcloud auth application-default set-quota-project $PROJECT_ID
+
+# Verification ("Big Three")
+gcloud auth list
+gcloud config get-value project
+cat $env:APPDATA\gcloud\application_default_credentials.json
+
+# STEP 3 — Enable required APIs
+gcloud services enable artifactregistry.googleapis.com --project $PROJECT_ID
+gcloud services enable bigquery.googleapis.com         --project $PROJECT_ID
+gcloud services enable iam.googleapis.com             --project $PROJECT_ID
+gcloud services enable run.googleapis.com             --project $PROJECT_ID
+gcloud services enable storage.googleapis.com          --project $PROJECT_ID
+
+# STEP 4 — Prepare Terraform
+cd terraform
+# Optional when switching project: rm terraform.tfstate, terraform.tfstate.backup
+terraform init -reconfigure
+
+# STEP 5 — Plan
+terraform plan -var="active_env=dev"
+
+# STEP 6 — Apply
+terraform apply -var="active_env=dev"
+# Type 'yes' when prompted
+
+# STEP 7 — Export outputs for CI/CD and ML
+terraform output -json > terraform-output.json
+cd ..
+# Commit terraform-output.json
+```
+
+**Expected outputs:** `artifact_repo_url`, `artifacts_bucket`, `cicd_service_account`, `data_bucket`, `dataset_id`, `project_id`, `region`, `runtime_service_account`, `table_id`.
+
+---
+
 [← Previous: Terraform Code Walkthrough](5-terraform-code-walkthrough.md) · [Index](README.md) · [Next: CI/CD Integration →](7-cicd-integration.md)

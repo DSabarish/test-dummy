@@ -1,4 +1,4 @@
-# New project template — GCP infra + config
+# New project template — Setting up GCP ML infra
 
 Use this folder to **start a new project** from the same Terraform and config pattern. It contains only the code and a config template; no state or cache.
 
@@ -33,7 +33,7 @@ new-project-template/
 
 ## How to use this template
 
-### Option A: New repo from this template
+### New repo from this template
 
 1. **Copy this whole folder** into your new repo’s root (or create a new repo and copy the contents so that `config.yaml` and `terraform/` sit at the **root** of the repo).
 
@@ -60,18 +60,30 @@ new-project-template/
 3. **Authenticate and enable APIs** (once per project):
    ```bash
    gcloud auth login
+
    gcloud auth application-default login
-   gcloud config set project YOUR_PROJECT_ID_DEV
-   gcloud services enable artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com run.googleapis.com storage.googleapis.com --project YOUR_PROJECT_ID_DEV
+   
+   $PROJECT_ID="sabs-dev5-100"
+   echo $PROJECT_ID
+   
+   gcloud config set project $PROJECT_ID
+   
+   gcloud services enable artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com run.googleapis.com storage.googleapis.com --project $PROJECT_ID
+   
+   gcloud services enable run.googleapis.com artifactregistry.googleapis.com bigquery.googleapis.com iam.googleapis.com --project $PROJECT_ID
    ```
    Repeat for qa/prod if you use separate projects.
 
 4. **Run Terraform** (from repo root):
    ```bash
    cd terraform
+   terraform -version
+   terraform init
+         or
    terraform init -reconfigure
    terraform plan -var="active_env=dev"
    terraform apply -var="active_env=dev"
+   > yes
    ```
    For qa/prod: run again with `-var="active_env=qa"` and `-var="active_env=prod"`.
 
@@ -104,3 +116,118 @@ new-project-template/
 - **Pin provider versions:** Keep required provider versions in `config.tf` (or `versions.tf`) so everyone and CI use the same Terraform/provider versions.
 - **Small, reviewable changes:** Prefer small Terraform changes and review them like code. Use meaningful commit messages (e.g. "add qa bucket lifecycle rule").
 - **Backup state (if local):** If you use local state, back up the state file and `.terraform.lock.hcl` before big changes. Prefer a remote backend for anything shared or production.
+
+---
+
+## Troubleshooting
+
+**`oauth2: cannot fetch token: 400 Bad Request` / `Invalid grant: account not found`**
+
+Terraform is using invalid or expired Google Cloud credentials. Re-authenticate with the account that has access to your GCP project:
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID_DEV
+```
+
+Use the same Google account that is a member of the GCP project. If you changed your Google password or revoked app access, you must run these commands again. Then retry `terraform plan` and `terraform apply`.
+
+---
+
+## Golden path — full execution script (PowerShell)
+
+Run this end-to-end on Windows (PowerShell) after editing `config.yaml` with your project ID. Replace `YOUR_PROJECT_ID_DEV` and `YOUR_EMAIL@gmail.com` with your values.
+
+```powershell
+############################################
+# GOLDEN PATH — FULL EXECUTION SCRIPT
+############################################
+
+# -------------------------------
+# PROJECT VARIABLE (must match config.yaml environments.dev.project_id)
+# -------------------------------
+$PROJECT_ID = "YOUR_PROJECT_ID_DEV"
+echo $PROJECT_ID
+
+# -------------------------------
+# STEP 1 — Environment & tools
+# -------------------------------
+terraform -version
+gcloud version
+
+# Clear any manually set credentials path (use gcloud default)
+$env:GOOGLE_APPLICATION_CREDENTIALS = ""
+
+# -------------------------------
+# STEP 2 — Authentication & project setup
+# -------------------------------
+gcloud auth application-default revoke
+gcloud auth login
+gcloud auth application-default login
+
+gcloud config set project $PROJECT_ID
+gcloud auth application-default set-quota-project $PROJECT_ID
+
+# Verification ("Big Three")
+gcloud auth list
+gcloud config get-value project
+cat $env:APPDATA\gcloud\application_default_credentials.json
+
+# -------------------------------
+# STEP 3 — Enable required APIs
+# -------------------------------
+gcloud services enable artifactregistry.googleapis.com --project $PROJECT_ID
+gcloud services enable bigquery.googleapis.com         --project $PROJECT_ID
+gcloud services enable iam.googleapis.com             --project $PROJECT_ID
+gcloud services enable run.googleapis.com              --project $PROJECT_ID
+gcloud services enable storage.googleapis.com          --project $PROJECT_ID
+
+# Optional: grant your user "act as" the runtime SA (for local Cloud Run testing)
+# gcloud projects add-iam-policy-binding $PROJECT_ID `
+#   --member="user:YOUR_EMAIL@gmail.com" `
+#   --role="roles/iam.serviceAccountUser"
+
+# Optional: let CICD SA act as runtime SA (needed for deploy)
+# Run after first terraform apply (replace with your project ID and SA names)
+# gcloud iam service-accounts add-iam-policy-binding `
+#   mlapp-dev-runtime@$PROJECT_ID.iam.gserviceaccount.com `
+#   --member="serviceAccount:mlapp-dev-cicd@$PROJECT_ID.iam.gserviceaccount.com" `
+#   --role="roles/iam.serviceAccountUser"
+
+# -------------------------------
+# STEP 4 — Prepare Terraform
+# -------------------------------
+cd terraform
+
+# Wipe old state only if switching project (prevents cross-project issues)
+# rm terraform.tfstate -ErrorAction SilentlyContinue
+# rm terraform.tfstate.backup -ErrorAction SilentlyContinue
+
+terraform init -reconfigure
+
+# -------------------------------
+# STEP 5 — Plan
+# -------------------------------
+terraform plan -var="active_env=dev"
+# Verify: all resources show project = "$PROJECT_ID"
+
+# -------------------------------
+# STEP 6 — Apply
+# -------------------------------
+terraform apply -var="active_env=dev"
+# Type 'yes' when prompted
+
+# -------------------------------
+# STEP 7 — Export outputs for CI/CD and ML
+# -------------------------------
+terraform output -json > terraform-output.json
+cd ..
+# Commit terraform-output.json
+
+############################################
+# DONE — Infra deployed to $PROJECT_ID
+############################################
+```
+
+**Expected outputs (example):** `artifact_repo_url`, `artifacts_bucket`, `cicd_service_account`, `data_bucket`, `dataset_id`, `project_id`, `region`, `runtime_service_account`, `table_id`.
