@@ -87,22 +87,20 @@ new-project-template/
 
 ---
 
-### Option B: New branch in the same repo
+## Terraform: cautions and good practices
 
-1. Create a new branch.
-2. Copy the contents of **new-project-template/** to the repo root (so `config.yaml` and `terraform/` are at root; merge or replace as needed).
-3. Follow steps 2–6 above: edit `config.yaml` with the new project IDs, run Terraform, export outputs, set secrets.
+**Cautions when working with Terraform**
 
----
+- **State and backend:** Do **not** commit `*.tfstate` or `.terraform/`. They contain paths, IDs, and (in some setups) secrets. This template uses local state; for teams, use a remote backend (e.g. GCS bucket) and lock it.
+- **`active_env`:** Always pass `-var="active_env=dev"` (or qa/prod) on `plan` and `apply`. Wrong env = wrong project and possible production changes.
+- **Destructive options:** `bucket_force_destroy: true` and `dataset_delete_on_destroy: true` in config allow Terraform to delete data when you destroy. Use only in dev; keep them `false` in qa/prod.
+- **Plan before apply:** Run `terraform plan -var="active_env=..."` and review the diff before every `apply`. Avoid applying blindly in CI without reviewing.
+- **No manual drift:** Prefer changing infra via Terraform (edit `.tf` or `config.yaml`, then plan/apply). Manual changes in GCP console will be overwritten or cause drift.
 
-## Important
+**Good practices to follow**
 
-- **config.yaml** must stay at the **same level as `terraform/` and `ML-code/`** (repo root). Terraform reads `../config.yaml`; ML-code reads `config.yaml` from repo root.
-- Do **not** copy any `terraform.tfstate` or `.terraform/` from another project. This template is code-only; each new project gets its own state after `terraform init` and `apply`.
-- After the first `apply`, always run `terraform output -json > terraform-output.json` and commit it so CI/CD and ML code can use bucket names, project ID, etc.
-
----
-
-## Folder name
-
-You can rename **new-project-template** to something like **project-template** or **starter** if you prefer. The only requirement is that when you copy it into a repo, **config.yaml** and **terraform/** end up at the root of that repo.
+- **One apply per env:** Run `terraform apply` separately for dev, qa, and prod with the correct `active_env`. Do not apply once and assume all envs are in sync.
+- **Commit `terraform-output.json`:** After the first apply (and after any change that affects outputs), run `terraform output -json > terraform-output.json` and commit it so CI/CD and ML code see current bucket names, project ID, etc.
+- **Pin provider versions:** Keep required provider versions in `config.tf` (or `versions.tf`) so everyone and CI use the same Terraform/provider versions.
+- **Small, reviewable changes:** Prefer small Terraform changes and review them like code. Use meaningful commit messages (e.g. "add qa bucket lifecycle rule").
+- **Backup state (if local):** If you use local state, back up the state file and `.terraform.lock.hcl` before big changes. Prefer a remote backend for anything shared or production.
