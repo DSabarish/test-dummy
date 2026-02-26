@@ -1,0 +1,193 @@
+# Template CI/CD: runs ML-code/run_pipeline.py (template script that prints config vars).
+# Add GCP_SA_KEY in GitHub Secrets and commit terraform-output.json after first apply.
+
+name: ML Pipeline & Deploy (CI/CD)
+
+on:
+  push:
+    branches: [dev, qa, prod]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: ML-code/requirements.txt
+
+      - run: pip install -r ML-code/requirements.txt
+
+      # Template script only prints config vars to show they are callable (no Terraform outputs needed here).
+      - name: Run template pipeline (config check)
+        run: python ML-code/run_pipeline.py
+
+  pipeline:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Load Terraform outputs into env
+        run: |
+          python3 - << 'PY'
+          import json, os
+          out = "terraform/terraform-output.json"
+          if not os.path.isfile(out):
+            print("::error::" + out + " not found. Run 'cd terraform && terraform output -json > terraform-output.json' and commit.")
+            exit(1)
+          with open(out, "rb") as f:
+            raw_bytes = f.read().replace(b"\x00", b"")
+          if raw_bytes.startswith(b"\xef\xbb\xbf"):
+            raw = raw_bytes[3:].decode("utf-8")
+          elif raw_bytes.startswith(b"\xff\xfe") or raw_bytes.startswith(b"\xfe\xff"):
+            rest = raw_bytes[2:]
+            try:
+              raw = rest.decode("utf-8")
+            except UnicodeDecodeError:
+              raw = rest.decode("utf-16-le" if raw_bytes.startswith(b"\xff\xfe") else "utf-16-be")
+          else:
+            raw = raw_bytes.decode("utf-8")
+          raw = raw.replace("\r", "")
+          try:
+            data = json.loads(raw)
+          except json.JSONDecodeError as e:
+            print("::error::" + out + " is not valid JSON:", e)
+            exit(1)
+          def v(k):
+            return (data.get(k) or {}).get("value") or ""
+          env_file = os.environ.get("GITHUB_ENV")
+          required = ["project_id", "table_id"]
+          for key in required:
+            if not v(key):
+              print("::error::Missing output in " + out + ": " + key + ". Re-run 'terraform output -json > terraform/terraform-output.json' and commit.")
+              exit(1)
+          for name, key in [("GCP_PROJECT", "project_id"), ("DATA_BUCKET", "data_bucket"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("DATASET_ID", "dataset_id"), ("TABLE_ID", "table_id")]:
+            with open(env_file, "a") as ef:
+              ef.write(name + "=" + v(key) + "\n")
+          PY
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: ML-code/requirements.txt
+
+      - run: pip install -r ML-code/requirements.txt
+
+      - name: Run ML pipeline
+        run: python ML-code/run_pipeline.py
+        env:
+          ACTIVE_ENV:       ${{ env.ACTIVE_ENV }}
+          GCP_PROJECT:      ${{ env.GCP_PROJECT }}
+          DATA_BUCKET:      ${{ env.DATA_BUCKET }}
+          ARTIFACTS_BUCKET: ${{ env.ARTIFACTS_BUCKET }}
+          DATASET_ID:       ${{ env.DATASET_ID }}
+          TABLE_ID:         ${{ env.TABLE_ID }}
+
+  deploy:
+    needs: [pipeline]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set ACTIVE_ENV from branch
+        run: echo "ACTIVE_ENV=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Load Terraform outputs into env
+        run: |
+          python3 - << 'PY'
+          import json, os
+          out = "terraform/terraform-output.json"
+          if not os.path.isfile(out):
+            print("::error::" + out + " not found.")
+            exit(1)
+          with open(out, "rb") as f:
+            raw_bytes = f.read().replace(b"\x00", b"")
+          raw = raw_bytes.decode("utf-8", errors="replace").replace("\r", "")
+          try:
+            data = json.loads(raw)
+          except json.JSONDecodeError as e:
+            print("::error::" + out + " is not valid JSON:", e)
+            exit(1)
+          def v(k):
+            return (data.get(k) or {}).get("value") or ""
+          env_file = os.environ.get("GITHUB_ENV")
+          for name, key in [("GCP_PROJECT", "project_id"), ("ARTIFACTS_BUCKET", "artifacts_bucket"), ("REGION", "region"), ("ARTIFACT_REPO_URL", "artifact_repo_url"), ("RUNTIME_SERVICE_ACCOUNT", "runtime_service_account")]:
+            with open(env_file, "a") as ef:
+              ef.write(name + "=" + v(key) + "\n")
+          PY
+
+      - name: Load Cloud Run config from config.yaml
+        run: |
+          pip install --quiet pyyaml
+          python3 - << 'PY'
+          import os, yaml
+          active_env = os.environ.get("ACTIVE_ENV", "dev").strip()
+          with open("config.yaml", "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+          block = (data.get("environments") or {}).get(active_env) or {}
+          cr = block.get("cloud_run") or {}
+          def get(k, d): v = cr.get(k); return str(d if v is None else v)
+          env_file = os.environ["GITHUB_ENV"]
+          with open(env_file, "a") as ef:
+            ef.write(f"CR_MIN_INSTANCES={get('min_instances', 0)}\n")
+            ef.write(f"CR_MAX_INSTANCES={get('max_instances', 10)}\n")
+            ef.write(f"CR_CPU={get('cpu', 1)}\n")
+            ef.write(f"CR_MEMORY={cr.get('memory') or '512Mi'}\n")
+            ef.write(f"CR_TIMEOUT_SECONDS={get('timeout_seconds', 300)}\n")
+            ef.write(f"CR_CONCURRENCY={get('concurrency', 80)}\n")
+          PY
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Docker auth
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push
+        run: |
+          REPO="${{ env.ARTIFACT_REPO_URL }}"
+          IMG="$REPO/app:${{ github.sha }}"
+          echo "Building $IMG"
+          docker build -t "$IMG" .
+          docker push "$IMG"
+          echo "IMAGE=$IMG" >> $GITHUB_ENV
+
+      - name: Deploy Cloud Run
+        run: |
+          gcloud run deploy app \
+            --image "${{ env.IMAGE }}" \
+            --region "${{ env.REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account "${{ env.RUNTIME_SERVICE_ACCOUNT }}" \
+            --set-env-vars "GCP_PROJECT=${{ env.GCP_PROJECT }},ARTIFACTS_BUCKET=${{ env.ARTIFACTS_BUCKET }},ACTIVE_ENV=${{ env.ACTIVE_ENV }}" \
+            --min-instances "${{ env.CR_MIN_INSTANCES }}" \
+            --max-instances "${{ env.CR_MAX_INSTANCES }}" \
+            --cpu "${{ env.CR_CPU }}" \
+            --memory "${{ env.CR_MEMORY }}" \
+            --timeout "${{ env.CR_TIMEOUT_SECONDS }}" \
+            --concurrency "${{ env.CR_CONCURRENCY }}"
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ env.GCP_PROJECT }}

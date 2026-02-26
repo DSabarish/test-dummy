@@ -1,0 +1,8 @@
+# Do not commit state or cache. When you use this template in a new project,
+# run terraform init and apply there; this keeps the template clean.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform-output.json

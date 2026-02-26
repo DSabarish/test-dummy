@@ -1,0 +1,197 @@
+# =============================================================================
+# TEMPLATE — Replace YOUR_PROJECT_ID_* with your real GCP project IDs.
+# This file is the single source of truth for Terraform and ML. Keep at repo root.
+# =============================================================================
+
+active_env: "dev"
+
+environments:
+
+  dev:
+    project_id: "YOUR_PROJECT_ID_DEV"   # ← Replace with your dev GCP project ID
+    region: "asia-south1"
+    environment: "dev"
+    prefix: "mlapp"
+
+    labels:
+      owner: "ml-team"
+      environment: "dev"
+
+    dataset_delete_on_destroy: true
+    bucket_force_destroy: true
+    bucket_storage_class: "STANDARD"
+    artifacts_retention_days: 7
+    data_retention_days: 3
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — dev"
+
+    cloud_run:
+      min_instances: 0
+      max_instances: 2
+      cpu: 1
+      memory: "512Mi"
+      timeout_seconds: 300
+      concurrency: 80
+
+    cicd_roles:
+      - "roles/storage.admin"
+      - "roles/artifactregistry.admin"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    dataset_id: "training_dataset_dev"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    push_to_next_branch: true
+    next_branch_name: "qa"
+
+  qa:
+    project_id: "YOUR_PROJECT_ID_QA"    # ← Replace with your qa GCP project ID
+    region: "asia-south1"
+    environment: "qa"
+    prefix: "mlapp"
+
+    labels:
+      owner: "ml-team"
+      environment: "qa"
+
+    dataset_delete_on_destroy: false
+    bucket_force_destroy: false
+    bucket_storage_class: "STANDARD"
+    artifacts_retention_days: 14
+    data_retention_days: 7
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — qa"
+
+    cloud_run:
+      min_instances: 0
+      max_instances: 5
+      cpu: 1
+      memory: "1Gi"
+      timeout_seconds: 300
+      concurrency: 80
+
+    cicd_roles:
+      - "roles/storage.admin"
+      - "roles/artifactregistry.admin"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    dataset_id: "training_dataset_qa"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    push_to_next_branch: true
+    next_branch_name: "prod"
+
+  prod:
+    project_id: "YOUR_PROJECT_ID_PROD"  # ← Replace with your prod GCP project ID
+    region: "asia-south1"
+    environment: "prod"
+    prefix: "mlapp"
+
+    labels:
+      owner: "ml-team"
+      environment: "prod"
+
+    dataset_delete_on_destroy: false
+    bucket_force_destroy: false
+    bucket_storage_class: "STANDARD"
+    artifacts_retention_days: 90
+    data_retention_days: 30
+    artifact_format: "DOCKER"
+    artifact_description: "Artifact repository — prod"
+
+    cloud_run:
+      min_instances: 1
+      max_instances: 20
+      cpu: 1
+      memory: "1Gi"
+      timeout_seconds: 300
+      concurrency: 80
+
+    cicd_roles:
+      - "roles/storage.objectAdmin"
+      - "roles/artifactregistry.writer"
+      - "roles/bigquery.dataEditor"
+      - "roles/bigquery.jobUser"
+      - "roles/iam.serviceAccountUser"
+      - "roles/run.admin"
+
+    runtime_roles:
+      - "roles/storage.objectViewer"
+      - "roles/bigquery.dataViewer"
+      - "roles/bigquery.jobUser"
+
+    dataset_id: "training_dataset_prod"
+    table_id: "features_table"
+    dataset_location: "asia-south1"
+
+    table_schema:
+      - name: "f1"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "f2"
+        type: "FLOAT"
+        mode: "NULLABLE"
+      - name: "T"
+        type: "FLOAT"
+        mode: "NULLABLE"
+
+    target_column: "T"
+    data_gcs_prefix: "data"
+    models_gcs_prefix: "models"
+    model_filename: "model.joblib"
+    latest_subfolder: "latest"
+
+    push_to_next_branch: false
+    next_branch_name: ""

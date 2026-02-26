@@ -60,7 +60,14 @@ Single source of truth; no drift between envs because all three are in one file.
 ├── .github/
 │   └── workflows/
 │       └── cicd.yml
-└── Dockerfile               # Cloud Run image (copies config.yaml)
+├── Dockerfile               # Cloud Run image (copies config.yaml)
+└── new-project-template/   # Copy this folder to start a new project (see its README)
+    ├── README.md            # How to use the template
+    ├── config.yaml          # Template: replace YOUR_PROJECT_ID_* with your GCP project IDs
+    └── terraform/           # Terraform code only (no state, no .terraform)
+        ├── config.tf
+        ├── main.tf
+        └── config-generator/
 ```
 
 ---
@@ -178,6 +185,40 @@ CI/CD reads **`terraform/terraform-output.json`**. Generate it with `terraform o
 |------|--------|
 | **README.md** (this file) | Overview, central config, config flow, layout, quick start, CI/CD. |
 | **command_mark.md** | Full runbook: auth, APIs, IAM, terraform, terraform-output.json, 409 handling. |
+
+---
+
+## Using this repo for a new project
+
+**Easiest:** Copy the **`new-project-template/`** folder from this repo. It contains Terraform code, a `config.yaml` template (placeholders like `YOUR_PROJECT_ID_DEV`), and a **README** with step-by-step instructions. Copy its contents to your new repo root, edit `config.yaml` with your project IDs, then run `terraform init` and `apply`.
+
+Alternatively, when **you** want to start a **new project** from this code (e.g. new branch or new repo), use the Terraform and ML code **without** the old project’s state or cache.
+
+**What to use**
+
+- **`terraform/`** — Use the `.tf` files only. **Do not** copy into the new project:
+  - `terraform/.terraform/` (cache)
+  - `terraform/*.tfstate` and `*.tfstate.backup` (state)
+  `.gitignore` already excludes these, so a new branch or clone only has the code. In the new project run `terraform init -reconfigure`, then `plan` and `apply`; you get a new state.
+
+- **`config.yaml`** — **Yes, you need it.** Terraform and ML-code both read it. For the new project, edit `config.yaml`: set the new **`project_id`** (and region, prefix, dataset/table names, etc.) for each environment. That’s the main change for a new GCP project.
+
+- **`terraform-output.json`** — Don’t reuse the old one. After the first `terraform apply` in the new project, run `terraform output -json > terraform-output.json` and commit it.
+
+**Steps for a new project**
+
+1. New branch or new repo from this code (no `.terraform/` or `*.tfstate`; they’re gitignored).
+2. Edit **`config.yaml`** with the new project’s `project_id` and env values.
+3. In `terraform/`: `terraform init -reconfigure`, then `plan` and `apply` with `-var="active_env=dev"` (and qa/prod if needed).
+4. Run `terraform output -json > terraform-output.json`, commit it. If using CI/CD, add **GCP_SA_KEY** for the new project in GitHub Secrets.
+5. Use ML-code as usual; it uses `config.yaml` and `terraform-output.json`.
+
+| Item | Use in new project? | Notes |
+|------|----------------------|--------|
+| `terraform/*.tf` | Yes | Code only; no state, no `.terraform/`. |
+| `config.yaml` | Yes | Edit for new `project_id` and env values. |
+| `terraform-output.json` | Regenerate | After `apply` in the new project. |
+| ML-code/ | Yes | Same code; config drives which project it uses. |
 
 ---
 

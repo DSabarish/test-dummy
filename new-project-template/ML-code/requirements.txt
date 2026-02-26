@@ -1,0 +1,2 @@
+# Minimal deps for template: config loading only. Add pandas, sklearn, etc. when you add real ML.
+pyyaml>=6.0
